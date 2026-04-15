@@ -17,7 +17,7 @@ function renderKanban(){
 
   board.innerHTML=COLS.map(col=>{
     let ct=activeTasks.filter(t=>t.status===col.key);
-    if(cf)ct=ct.filter(t=>t.category===cf);
+    if(cf)ct=ct.filter(t=>(t.category||'').split(',').map(s=>s.trim()).includes(cf));
     const priOrder=settings.priorities.map(p=>p.key);
     const s=[...ct].sort((a,b)=>priOrder.indexOf(a.priority)-priOrder.indexOf(b.priority));
     const colColor = col.color || '#888888';

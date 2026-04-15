@@ -1,0 +1,21 @@
+# 자동 생성 세션 파일 (PreCompact hook)
+.claude/sessions/auto-*.md
+
+# Gemini CLI 로컬 설정 (인증 정보 제외)
+.gemini/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# 에디터
+.vscode/
+.idea/
+
+# 로컬 임시 파일
+*.tmp
+*.bak
+docs/ref/CLAUDE/
+docs/ref/

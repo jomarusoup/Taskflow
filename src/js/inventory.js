@@ -12,6 +12,40 @@ const INV_DEFAULT_ST = [
 ];
 const INV_PAL = ['#6aabdb','#4dba8a','#8c82d8','#d8758a','#d4a030','#d47050','#6aaa40','#d06060'];
 
+const INV_OSPF_ST = [
+  {label:'Full',color:'#4caf50'},{label:'Loading',color:'#2196f3'},
+  {label:'2-Way',color:'#ffc107'},{label:'ExStart',color:'#ff9800'},
+  {label:'Down',color:'#f44336'},{label:'Attempt',color:'#9e9e9e'},{label:'Init',color:'#cccccc'},
+];
+
+function invGetOSPFData() {
+  const tid = invGenId(), bc0 = invGenId(), bc1 = invGenId();
+  const c = {
+    area: invGenId(), rid: invGenId(), iface: invGenId(), ip: invGenId(), 
+    cost: invGenId(), pri: invGenId(), st: invGenId(), nbr: invGenId()
+  };
+  return {
+    activeTab: 0, colWidths: {}, rowHeights: {}, hiddenCols: [], tabMemos: {},
+    baseCols: [{id: bc0, name: 'No', type: 'text', nodels: true}, {id: bc1, name: '라우터명', type: 'text', nodels: true}],
+    tabs: [{
+      id: tid, name: 'OSPF 설정',
+      cols: [
+        {id: c.area, name: 'Area', type: 'text'},
+        {id: c.rid,  name: 'Router ID', type: 'text'},
+        {id: c.iface,name: 'Interface', type: 'text'},
+        {id: c.ip,   name: 'IP Address', type: 'text'},
+        {id: c.cost, name: 'Cost', type: 'text'},
+        {id: c.st,   name: 'State', type: 'status', statuses: invClone(INV_OSPF_ST)},
+        {id: c.nbr,  name: 'Neighbor ID', type: 'text'}
+      ]
+    }],
+    rows: [
+      {id: invGenId(), base: {[bc0]:'001', [bc1]:'Core-R1'}, data: {[tid]: {[c.area]:'0', [c.rid]:'1.1.1.1', [c.iface]:'Gi0/0', [c.st]:'Full'}}},
+      {id: invGenId(), base: {[bc0]:'002', [bc1]:'Edge-R1'}, data: {[tid]: {[c.area]:'1', [c.rid]:'2.2.2.2', [c.iface]:'Gi0/1', [c.st]:'Full'}}}
+    ]
+  };
+}
+
 function invHexRgb(h){return{r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)};}
 function invAlpha(h,a){const{r,g,b}=invHexRgb(h);return`rgba(${r},${g},${b},${a})`;}
 function invLightBg(hex){const{r,g,b}=invHexRgb(hex);const m=c=>Math.round(c*.2+255*.8);const t=n=>n.toString(16).padStart(2,'0');return'#'+t(m(r))+t(m(g))+t(m(b));}

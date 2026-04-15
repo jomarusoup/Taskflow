@@ -424,32 +424,43 @@ function openSchModal(date, sch=null){
   const isEdit = !!sch;
   const overlay = document.createElement('div');
   overlay.className='modal-overlay';overlay.id='sch-modal-overlay';overlay.style.display='flex';
-  overlay.innerHTML=`<div class="modal" style="max-width:420px">
+  overlay.innerHTML=`<div class="modal" style="width:460px">
     <div class="modal-header"><div class="modal-title">${isEdit?'일정 수정':'일정 추가'}</div></div>
-    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
-      <div class="field-row"><label class="field-label">제목</label>
-        <input class="field-input" id="sch-title" value="${esc(sch?.title||'')}" placeholder="일정 제목" autocomplete="off"></div>
-      <div class="field-row"><label class="field-label">날짜</label>
-        <input class="field-input" type="date" id="sch-date" value="${esc(sch?.date||date||'')}"></div>
-      <div style="display:flex;gap:10px">
-        <div class="field-row" style="flex:1"><label class="field-label">시작</label>
-          <input class="field-input" type="time" id="sch-start" value="${esc(sch?.startTime||'')}"></div>
-        <div class="field-row" style="flex:1"><label class="field-label">종료</label>
-          <input class="field-input" type="time" id="sch-end" value="${esc(sch?.endTime||'')}"></div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-label">제목</label>
+        <input class="field-input" id="sch-title" value="${esc(sch?.title||'')}" placeholder="일정 제목" autocomplete="off">
       </div>
-      <div class="field-row"><label class="field-label">색상</label>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-          ${SCH_COLORS.map(c=>`<button onclick="document.getElementById('sch-color').value='${c}';this.parentElement.querySelectorAll('button').forEach(b=>b.style.outline='none');this.style.outline='2px solid var(--amber)'" style="width:20px;height:20px;background:${c};border:none;border-radius:50%;cursor:pointer;outline:${(sch?.color||SCH_COLORS[0])===c?'2px solid var(--amber)':'none'}"></button>`).join('')}
-          <input type="color" id="sch-color" value="${esc(sch?.color||SCH_COLORS[0])}" style="width:28px;height:22px;border:1px solid var(--border);cursor:pointer;border-radius:3px;background:var(--s2)">
+      <div class="field">
+        <label class="field-label">날짜</label>
+        <input class="field-input" type="date" id="sch-date" value="${esc(sch?.date||date||'')}">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">시작 시간</label>
+          <input class="field-input" type="time" id="sch-start" value="${esc(sch?.startTime||'')}">
+        </div>
+        <div class="field">
+          <label class="field-label">종료 시간</label>
+          <input class="field-input" type="time" id="sch-end" value="${esc(sch?.endTime||'')}">
         </div>
       </div>
-      <div class="field-row"><label class="field-label">메모</label>
-        <textarea class="field-input" id="sch-memo" rows="2" placeholder="메모...">${esc(sch?.memo||'')}</textarea></div>
+      <div class="field">
+        <label class="field-label">색상</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:4px 0">
+          ${SCH_COLORS.map(c=>`<button onclick="document.getElementById('sch-color').value='${c}';this.parentElement.querySelectorAll('button').forEach(b=>b.style.outline='none');this.style.outline='2px solid var(--amber)'" style="width:24px;height:24px;background:${c};border:none;border-radius:50%;cursor:pointer;outline:${(sch?.color||SCH_COLORS[0])===c?'2px solid var(--amber)':'none'};transition:transform .1s" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'"></button>`).join('')}
+          <input type="color" id="sch-color" value="${esc(sch?.color||SCH_COLORS[0])}" style="width:32px;height:28px;border:1px solid var(--border);cursor:pointer;border-radius:4px;background:var(--s2);padding:2px">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">메모</label>
+        <textarea class="field-input" id="sch-memo" style="height:auto;min-height:80px;padding-top:10px" placeholder="일정 관련 메모를 입력하세요...">${esc(sch?.memo||'')}</textarea>
+      </div>
     </div>
-    <div class="modal-footer">
-      ${isEdit?`<button class="btn btn-ghost btn-sm" style="color:var(--red);margin-right:auto" onclick="deleteSchEntry('${esc(sch.id)}')">삭제</button>`:''}
-      <button class="btn btn-ghost btn-sm" onclick="closeSchModal()">취소</button>
-      <button class="btn btn-primary btn-sm" onclick="saveSchModal(${isEdit?`'${esc(sch.id)}'`:'null'})">저장</button>
+    <div class="modal-foot">
+      ${isEdit?`<button class="btn btn-danger btn-sm" style="margin-right:auto" onclick="deleteSchEntry('${esc(sch.id)}')">삭제</button>`:''}
+      <button class="btn btn-ghost" onclick="closeSchModal()">취소</button>
+      <button class="btn btn-primary" onclick="saveSchModal(${isEdit?`'${esc(sch.id)}'`:'null'})">저장</button>
     </div>
   </div>`;
   overlay.addEventListener('click',e=>{if(e.target===overlay)closeSchModal();});

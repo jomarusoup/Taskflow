@@ -192,7 +192,7 @@ function renderSettings(){
     ? settings.categories.map((c,i)=>`
       <div class="settings-item" id="scat-${i}">
         <span class="settings-item-label" id="scat-label-${i}">${esc(c)}</span>
-        <span class="settings-item-sub">${tasks.filter(t=>t.category===c).length}개 업무</span>
+        <span class="settings-item-sub">${tasks.filter(t=>(t.category||'').split(',').map(s=>s.trim()).includes(c)).length}개 업무</span>
         <button class="btn btn-ghost btn-sm btn-icon" onclick="editInline('scat',${i},'categories')" title="수정">✎</button>
         <button class="btn btn-danger btn-sm btn-icon" onclick="removeSetting('categories',${i},'category')" title="삭제">✕</button>
       </div>`).join('')
@@ -264,7 +264,11 @@ function editInline(prefix, idx, type){
   function commit(){
     const val=inp.value.trim();
     if(val && val!==cur){
-      if(type==='categories') tasks.forEach(t=>{if(t.category===cur)t.category=val;});
+      if(type==='categories') tasks.forEach(t=>{
+        const cats = (t.category||'').split(',').map(s=>s.trim());
+        const idx = cats.indexOf(cur);
+        if(idx>=0){ cats[idx]=val; t.category=cats.join(', '); }
+      });
       else tasks.forEach(t=>{t.tags=t.tags.map(tg=>tg===cur?val:tg);});
       settings[type][idx]=val;
       save(); saveSettings(); toast(`"${cur}" → "${val}" 수정 완료`);

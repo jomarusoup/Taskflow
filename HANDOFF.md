@@ -6,9 +6,9 @@
 ---
 
 ## 마지막 갱신
-- 날짜: 2026-04-14
-- 작업자: git auto (post-commit)
-- 커밋: `1522026` modi
+- 날짜: 2026-04-15
+- 작업자: Gemini
+- 커밋: (작업 중 - 커밋 전)
 
 ---
 
@@ -17,8 +17,8 @@
 | 파일 영역 | 설명 | 줄수 |
 |---|---|---|
 | `src/index.html` | 메인 UI (엔트리포인트) | 688줄 |
-| `src/css/style.css` | 전체 스타일 | 861줄 |
-| `src/js/*.js` | 11개 모듈화된 JS 파일들 | ~3,100줄 |
+| `src/css/style.css` | 전체 스타일 | 868줄 |
+| `src/js/*.js` | 11개 모듈화된 JS 파일들 | ~3,600줄 |
 
 - 브랜치: `main`
 - GitHub: jomarusoup/taskflow
@@ -27,13 +27,16 @@
 
 ## 완료된 주요 작업 (최근순)
 
-- [x] (Gemini) 프로젝트 구조 개편: 루트 파일을 `src/` 폴더로 이동
-- [x] (Gemini) `taskflow.js` 해체: 11개의 기능별 모듈 파일로 분리 (토큰 절약 및 유지보수성 향상)
-- [x] (Gemini) `index.html` 내 스크립트 의존성 순서대로 연결 완료
-- [x] (Gemini) 백업/가져오기 시 일정(schedules) 데이터 누락 수정
-- [x] (Gemini) .gemini/settings.json 훅 설정 동기화 (Claude와 세션 공유)
-- [x] (Gemini) 업무대장 그룹뷰 열 정렬 및 너비 최적화
-- [x] (Gemini) 사이드바 칸반/인벤토리 아이콘 중복 수정
+- [x] (Gemini) **상세 패널 카테고리/태그 다중 선택 UI 고도화**:
+    - 태그 및 카테고리 입력란을 모두 검색/선택/직접입력이 가능한 다중 선택 UI(Pill + Dropdown)로 업그레이드.
+    - 검색창을 상단에 고정(`sticky`)하고 배경색을 부여하여 스크롤 시 시인성 확보.
+    - 검색창에서 새로운 항목 입력 후 `Enter` 시 즉시 추가되는 기능 구현.
+- [x] (Gemini) **상세 패널 데이터 유지 버그 수정**:
+    - 저장 또는 렌더링 시 상세 패널 내의 다중 선택 UI(Pill)가 사라지는 현상 수정 (리스트/그룹 뷰 공통).
+- [x] (Gemini) **일정 추가/수정 팝업 레이아웃 최적화**:
+    - 필드 구조 상하 배치 통일, 시간 필드 그리드 적용, 하단 여백 보정.
+- [x] (Gemini) **업무 대장 그룹 뷰 레이아웃 및 너비 최적화**:
+    - 버튼/제목 가로 정렬, `table-layout: auto` 및 `min-width` 적용.
 
 ---
 
@@ -45,56 +48,27 @@
 
 ## 다음 세션이 할 일
 
-- [ ] (디자인/UI) 전체적인 UI 폴리싱 및 사용자 피드백 반영 (필요 시)
-- [ ] (기능) 추가적인 편의 기능 아이디어 도출 및 구현
+- [ ] (UI/UX) 전체적인 UI 폴리싱 및 사용자 피드백 반영.
+- [ ] (기능) 업무 상세보기 모달(Modal)의 태그/카테고리 드롭다운에도 검색 및 직접 입력 기능 수평 전개 검토.
 
 // 스토리지 키
-taskflow_v3           // tasks[]
-taskflow_settings_v1  // settings
-taskflow_recurring_v1 // recurringTasks[]
-taskflow_annual_v1    // annualTasks[]
-taskflow_contacts_v1  // contacts[]
-taskflow_schedules_v1 // schedules[] ← 최근 추가
+taskflow_v3 / taskflow_settings_v1 / taskflow_recurring_v1
+taskflow_annual_v1 / taskflow_contacts_v1 / taskflow_schedules_v1
 
 // tasks[] 스키마
 { id, title, category, priority, status, tags[], startDate, dueDate,
   completedAt, assigneeId, memo, contactIds[], linkedTaskIds[] }
 
-// schedules[] 스키마 (신규)
-{ id, title, date, startTime, endTime, color, memo }
-```
-
 ---
 
 ## 알려진 주의사항
 
-- `colspan` 현재 동적 처리 (고정값 없음)
-- SCHEDULE_KEY = `taskflow_schedules_v1` — 백업 시 포함 여부 확인 필요
-- `_renderEventBars` rAF 밖 실행 → `layer.parentElement` null 가드 필요
-- 외부 CDN·fetch·import 절대 금지 (내부망 CSP)
-
----
-
-## 다음 세션이 할 일
-
-- [ ] (없음 — 이슈 확인 후 결정)
+- `ledger.js`의 EP(Expanded Panel) 헬퍼 함수들은 `_epCatState`, `_epTagState` 등을 기반으로 동작함.
+- 외부 CDN·fetch·import 절대 금지 (내부망 CSP 대응).
 
 ---
 
 ## 전환 방법
-
-### Claude → Gemini 전환
-```
-# Claude에서 먼저 실행:
-/handoff
-
-# Gemini 시작:
-cd /Users/jomarusoup/Documents/project/taskflow
-gemini
-
-# Gemini 첫 메시지:
-HANDOFF.md와 GEMINI.md를 읽고 이어서 진행해줘
-```
 
 ### Gemini → Claude 전환
 ```

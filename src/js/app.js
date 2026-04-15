@@ -26,7 +26,7 @@ function updateFilterDropdowns() {
   // Kanban cat filter
   const kanbanCatFilter = document.getElementById('kanban-cat-filter');
   if (kanbanCatFilter) {
-    const cats = [...new Set(tasks.map(t => t.category).filter(Boolean))].sort();
+    const cats = [...new Set(tasks.flatMap(t => (t.category||'').split(',').map(s=>s.trim()).filter(Boolean)))].sort();
     kanbanCatFilter.innerHTML = ['<option value="">전체 카테고리</option>', ...cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`)].join('');
   }
   // 멀티셀렉트 라벨 갱신

@@ -1,0 +1,33 @@
+{
+  "approvalMode": "auto_edit",
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PAT}"
+      }
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["chrome-devtools-mcp@latest"]
+    }
+  },
+  "hooksConfig": {
+    "enabled": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": ".claude/hooks/session-start.sh"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "type": "command",
+        "command": ".claude/hooks/session-end.sh"
+      }
+    ]
+  }
+}

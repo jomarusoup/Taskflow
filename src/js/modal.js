@@ -15,26 +15,30 @@ function openModal(id = null, defaultStatus = 'todo') {
   if (id) {
     const t = tasks.find(x => x.id === id); if (!t) return;
     document.getElementById('f-title').value     = t.title;
-    document.getElementById('f-cat').value       = t.category;
     document.getElementById('f-priority').value  = t.priority;
     document.getElementById('f-status').value    = t.status;
     document.getElementById('f-start').value     = t.startDate || '';
     document.getElementById('f-due').value       = t.dueDate   || '';
     const memoEl = document.getElementById('f-memo'); if (memoEl) { memoEl.value = t.memo || ''; autoGrowTextarea(memoEl); }
     selectedTags = [...(t.tags || [])];
-    _populateAssignee(t.category, t.assigneeIds || []);
+    selectedCategories = (t.category || '').split(',').map(s => s.trim()).filter(Boolean);
+    selectedLinkedTasks = [...(t.linkedTaskIds || [])];
+    _populateAssignee(selectedCategories[0] || '', t.assigneeIds || []);
   } else {
     document.getElementById('f-title').value    = '';
-    document.getElementById('f-cat').value      = '';
     document.getElementById('f-priority').value = 'medium';
     document.getElementById('f-status').value   = defaultStatus;
     document.getElementById('f-start').value    = '';
     document.getElementById('f-due').value      = '';
     const memoEl = document.getElementById('f-memo'); if (memoEl) { memoEl.value = ''; memoEl.style.height = ''; }
     selectedTags = [];
+    selectedCategories = [];
+    selectedLinkedTasks = [];
     _populateAssignee('', []);
   }
+  renderCatMulti();
   renderTagMulti();
+  renderLinkedTaskMulti();
   const overlay = document.getElementById('modal-overlay');
   if (overlay) overlay.classList.add('open');
   const titleInp = document.getElementById('f-title');
@@ -42,11 +46,6 @@ function openModal(id = null, defaultStatus = 'todo') {
 }
 
 function populateModalDropdowns() {
-  // Category
-  const catEl = document.getElementById('f-cat');
-  if (catEl) catEl.innerHTML = '<option value="">— 없음 —</option>' +
-    settings.categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
-
   // Priority
   const priEl = document.getElementById('f-priority');
   if (priEl) priEl.innerHTML = settings.priorities.map(p => `<option value="${esc(p.key)}">${esc(p.label)}</option>`).join('');
@@ -55,12 +54,8 @@ function populateModalDropdowns() {
   const stEl = document.getElementById('f-status');
   if (stEl) stEl.innerHTML = settings.statuses.map(s => `<option value="${esc(s.key)}">${esc(s.label)}</option>`).join('');
 
-  // populate assignee dropdown (카테고리 연동)
+  // populate assignee dropdown
   _populateAssignee('', []);
-  const catElModal = document.getElementById('f-cat');
-  if (catElModal) {
-    catElModal.onchange = () => { selectedAssignees = []; renderAssigneeMulti(catElModal.value); };
-  }
 
   // Tag dropdown options
   const dd = document.getElementById('tag-dropdown');
@@ -129,6 +124,134 @@ function removeTag(e, tag) {
   renderTagMulti();
 }
 
+// ── Category multi-select ─────────────────────────────
+function renderCatMulti() {
+  const sel = document.getElementById('cat-multi-selected');
+  const ph  = document.getElementById('cat-placeholder');
+  if (!sel) return;
+  if (selectedCategories.length === 0) {
+    if (ph) ph.style.display = '';
+    sel.querySelectorAll('.tag-pill').forEach(el => el.remove());
+  } else {
+    if (ph) ph.style.display = 'none';
+    sel.querySelectorAll('.tag-pill').forEach(el => el.remove());
+    selectedCategories.forEach(cat => {
+      const pill = document.createElement('div');
+      pill.className = 'tag-pill';
+      pill.innerHTML = `${esc(cat)} <span class="tag-pill-x" onclick="removeCat(event,'${esc(cat)}')">✕</span>`;
+      sel.insertBefore(pill, ph);
+    });
+  }
+  _refreshCatDd();
+}
+function _refreshCatDd() {
+  const dd = document.getElementById('cat-dropdown');
+  if (!dd) return;
+  dd.innerHTML = settings.categories.map(cat => {
+    const isSel = selectedCategories.includes(cat);
+    return `<div class="tag-option ${isSel?'selected':''}" onclick="toggleCat(event,'${esc(cat)}')">
+      <div class="tag-check">${isSel?'✓':''}</div>${esc(cat)}
+    </div>`;
+  }).join('') || '<div style="padding:8px 12px;font-size:12px;color:var(--text3)">카테고리 없음</div>';
+}
+function toggleCatDropdown(e) {
+  const dd = document.getElementById('cat-dropdown');
+  if (!dd) return;
+  _refreshCatDd();
+  dd.classList.toggle('open');
+}
+function toggleCat(e, cat) {
+  if (e) e.stopPropagation();
+  const idx = selectedCategories.indexOf(cat);
+  if (idx >= 0) selectedCategories.splice(idx, 1); else selectedCategories.push(cat);
+  renderCatMulti();
+  selectedAssignees = [];
+  renderAssigneeMulti();
+  _refreshAssigneeDd();
+}
+function removeCat(e, cat) {
+  if (e) e.stopPropagation();
+  selectedCategories = selectedCategories.filter(c => c !== cat);
+  renderCatMulti();
+  selectedAssignees = [];
+  renderAssigneeMulti();
+  _refreshAssigneeDd();
+}
+
+// ── Linked Task multi-select ──────────────────────────
+function renderLinkedTaskMulti() {
+  const sel = document.getElementById('linked-multi-selected');
+  const ph  = document.getElementById('linked-placeholder');
+  if (!sel) return;
+  sel.querySelectorAll('.tag-pill').forEach(el => el.remove());
+  if (selectedLinkedTasks.length === 0) {
+    if (ph) ph.style.display = '';
+  } else {
+    if (ph) ph.style.display = 'none';
+    selectedLinkedTasks.forEach(tid => {
+      const t = tasks.find(x => x.id === tid);
+      if (!t) return;
+      const pill = document.createElement('div');
+      pill.className = 'tag-pill';
+      pill.innerHTML = `${esc(t.title)} <span class="tag-pill-x" onclick="removeLinkedTask(event,'${esc(tid)}')">✕</span>`;
+      sel.insertBefore(pill, ph);
+    });
+  }
+}
+function _refreshLinkedTaskList(query) {
+  const wrap = document.getElementById('linked-task-list');
+  if (!wrap) return;
+  const q = (query || '').trim().toLowerCase();
+  const list = tasks.filter(t =>
+    t.id !== editingId &&
+    !t.linkedSourceType &&
+    t.status !== 'archived' &&
+    (!q || t.title.toLowerCase().includes(q) || (t.category||'').toLowerCase().includes(q))
+  );
+  const stMap = {};
+  (settings.statuses || []).forEach(s => { stMap[s.key] = s.label; });
+  wrap.innerHTML = list.length
+    ? list.map(t => {
+        const isSel = selectedLinkedTasks.includes(t.id);
+        const meta = [t.category, stMap[t.status] || t.status].filter(Boolean).join(' · ');
+        return `<div class="tag-option ${isSel?'selected':''}" onclick="toggleLinkedTask(event,'${esc(t.id)}')">
+          <div class="tag-check">${isSel?'✓':''}</div>
+          <div style="overflow:hidden">
+            <div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</div>
+            ${meta?`<div style="font-size:11px;color:var(--text3);margin-top:1px">${esc(meta)}</div>`:''}
+          </div>
+        </div>`;
+      }).join('')
+    : '<div style="padding:8px 12px;font-size:12px;color:var(--text3)">업무 없음</div>';
+}
+function toggleLinkedDropdown(e) {
+  const dd = document.getElementById('linked-dropdown');
+  if (!dd) return;
+  const isOpen = dd.classList.contains('open');
+  dd.classList.toggle('open');
+  if (!isOpen) {
+    const si = document.getElementById('linked-search');
+    if (si) { si.value = ''; si.focus(); }
+    _refreshLinkedTaskList('');
+  }
+}
+function filterLinkedTasks(q) {
+  _refreshLinkedTaskList(q);
+}
+function toggleLinkedTask(e, id) {
+  if (e) e.stopPropagation();
+  const idx = selectedLinkedTasks.indexOf(id);
+  if (idx >= 0) selectedLinkedTasks.splice(idx, 1); else selectedLinkedTasks.push(id);
+  renderLinkedTaskMulti();
+  const si = document.getElementById('linked-search');
+  _refreshLinkedTaskList(si ? si.value : '');
+}
+function removeLinkedTask(e, id) {
+  if (e) e.stopPropagation();
+  selectedLinkedTasks = selectedLinkedTasks.filter(x => x !== id);
+  renderLinkedTaskMulti();
+}
+
 function closeModal() {
   const overlay = document.getElementById('modal-overlay');
   if (overlay) overlay.classList.remove('open');
@@ -141,13 +264,14 @@ function saveTask() {
   const title = titleEl ? titleEl.value.trim() : '';
   if (!title) { if (titleEl) titleEl.focus(); return; }
   const data = {
-    title, category: document.getElementById('f-cat').value,
+    title, category: selectedCategories.join(', '),
     tags: [...selectedTags],
     priority: document.getElementById('f-priority').value,
     status:   document.getElementById('f-status').value,
     startDate:  document.getElementById('f-start').value || null,
     dueDate:    document.getElementById('f-due').value   || null,
     assigneeIds: [...selectedAssignees],
+    linkedTaskIds: [...selectedLinkedTasks],
     memo: document.getElementById('f-memo')?.value || '',
   };
   if (editingId) { updateTask(editingId, data); toast('수정 완료'); }
@@ -189,14 +313,16 @@ function renderAssigneeMulti(cat) {
 function _refreshAssigneeDd(cat) {
   const dd = document.getElementById('assignee-dropdown');
   if (!dd) return;
-  const c2 = cat !== undefined ? cat : (document.getElementById('f-cat')?.value || '');
-  const list = c2 ? contacts.filter(c => (c.categories||[]).includes(c2)) : contacts;
+  const activeCats = cat !== undefined ? (cat ? [cat] : []) : selectedCategories;
+  const list = activeCats.length
+    ? contacts.filter(c => activeCats.some(cat => (c.categories||[]).includes(cat)))
+    : contacts;
   dd.innerHTML = list.length
     ? list.map(c => {
         const isSel = selectedAssignees.includes(c.id);
         const roles = (c.categoryRoles||[]);
-        const roleStr = c2
-          ? (()=>{ const r=roles.find(r=>r.category===c2); return r?(r.role==='main'?' · 정':' · 부'):''; })()
+        const roleStr = activeCats.length
+          ? (()=>{ const r=roles.find(r=>activeCats.includes(r.category)); return r?(r.role==='main'?' · 정':' · 부'):''; })()
           : (roles.length ? ' · ' + roles.map(r=>`${esc(r.category)} ${r.role==='main'?'정':'부'}`).join(', ') : '');
         return `<div class="tag-option ${isSel?'selected':''}" onclick="toggleAssignee(event,'${esc(c.id)}')">
           <div class="tag-check">${isSel?'✓':''}</div>${esc(_assigneeLabel(c))}${roleStr}
@@ -340,6 +466,16 @@ document.addEventListener('click', e => {
   const richDd = document.getElementById('rich-tag-dd');
   const richWrap = document.getElementById('rich-tag-multi');
   if (richDd && richWrap && !richWrap.contains(e.target)) richDd.classList.remove('open');
+
+  // category dropdown
+  const catDd = document.getElementById('cat-dropdown');
+  const catMulti = document.getElementById('cat-multi');
+  if (catDd && catMulti && !catMulti.contains(e.target)) catDd.classList.remove('open');
+
+  // linked task dropdown
+  const linkedDd = document.getElementById('linked-dropdown');
+  const linkedMulti = document.getElementById('linked-multi');
+  if (linkedDd && linkedMulti && !linkedMulti.contains(e.target)) linkedDd.classList.remove('open');
 
   // assignee dropdown
   const assDd = document.getElementById('assignee-dropdown');

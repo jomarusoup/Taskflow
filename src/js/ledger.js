@@ -8,6 +8,9 @@ let grpSort = {}; // {category: {key, dir}}
 let grpOpen = new Set();
 let grpExpandedId = null; // 그룹 모드 인라인 상세
 const mselState = { status: new Set(), priority: new Set(), cat: new Set() };
+const _epCatState = {};    // taskId → string[] (상세패널 카테고리)
+const _epTagState = {};    // taskId → string[] (상세패널 태그)
+const _epLinkedState = {}; // taskId → string[] (상세패널 연결업무)
 
 function setLedgerMode(mode) {
   ledgerMode = mode;
@@ -33,7 +36,7 @@ function renderLedger(){
   if(search) list = list.filter(t => t.title.toLowerCase().includes(search) || (t.memo||'').toLowerCase().includes(search));
   if(selSt.size)  list = list.filter(t => selSt.has(t.status));
   if(selPri.size) list = list.filter(t => selPri.has(t.priority));
-  if(selCat.size && ledgerMode !== 'group') list = list.filter(t => selCat.has(t.category));
+  if(selCat.size && ledgerMode !== 'group') list = list.filter(t => (t.category||'').split(',').map(s=>s.trim()).some(c=>selCat.has(c)));
   if(tag)         list = list.filter(t => t.tags.some(tg => tg.toLowerCase().includes(tag)));
 
   // 정렬 적용
@@ -94,6 +97,9 @@ function renderLedger(){
       autoGrowTextarea(ta);
       ta.addEventListener('keydown', e => { if((e.ctrlKey||e.metaKey) && e.key === 's'){ e.preventDefault(); saveExpandRow(expandedId); } });
     }
+    renderEpCatMulti(expandedId);
+    renderEpTagMulti(expandedId);
+    renderEpLinkedTaskMulti(expandedId);
   }
 }
 
@@ -125,11 +131,15 @@ function _renderLedgerGroup(list) {
       const tags = t.tags.slice(0,3).map(tg => `<span class="tag">${esc(tg)}</span>`).join('');
       const assigneeNames = (t.assigneeIds||[]).map(id => { const c = contacts.find(x => x.id === id); return c ? esc(c.name) : null; }).filter(Boolean);
       const assigneeLabel = assigneeNames.length ? assigneeNames.join(', ') : '—';
-      const accentBar = `<div style="display:inline-block;width:3px;height:14px;border-radius:2px;background:${accentColor(t.priority)};vertical-align:middle;margin-right:6px;flex-shrink:0"></div>`;
+      const accentBar = `<div style="width:3px;height:14px;border-radius:2px;background:${accentColor(t.priority)};flex-shrink:0"></div>`;
       const expandRows = isExp ? `<tr class="expand-row open" id="grp-exp-row-${t.id}"><td colspan="9" style="padding:0">${buildExpandPanel(t)}</td></tr>` : '';
       return `<tr class="data-row" onclick="toggleGrpExpand('${esc(t.id)}')">
         <td class="grp-row-id">${t.id}</td>
-        <td><button class="expand-btn ${isExp?'open':''}" style="margin-right:4px" onclick="event.stopPropagation();toggleGrpExpand('${esc(t.id)}')">▶</button>${accentBar}<span class="grp-row-title">${esc(t.title)}</span></td>
+        <td class="td-title"><div class="td-title-inner">
+          <button class="expand-btn ${isExp?'open':''}" onclick="event.stopPropagation();toggleGrpExpand('${esc(t.id)}')">▶</button>
+          ${accentBar}
+          <span class="td-title-text" title="${esc(t.title)}">${esc(t.title)}</span>
+        </div></td>
         <td class="grp-row-date">${fmtDate(t.startDate)}</td>
         <td class="grp-row-date ${ovd?'overdue':''}">${fmtDate(t.dueDate)}</td>
         <td><span class="pri" style="${priStyle(t.priority)}">${priLabel(t.priority)}</span></td>
@@ -175,6 +185,14 @@ function _renderLedgerGroup(list) {
       </div>
     </div>`;
   }).join('');
+
+  if (grpExpandedId) {
+    const ta = document.getElementById('ep-memo-' + grpExpandedId);
+    if (ta) { attachMemoTabKey(ta); autoGrowTextarea(ta); ta.addEventListener('keydown', e => { if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveExpandRow(grpExpandedId);} }); }
+    renderEpCatMulti(grpExpandedId);
+    renderEpTagMulti(grpExpandedId);
+    renderEpLinkedTaskMulti(grpExpandedId);
+  }
 }
 
 function toggleGrp(cat) {
@@ -193,6 +211,9 @@ function toggleGrpExpand(id) {
         row.scrollIntoView({behavior:'smooth', block:'nearest'});
         const ta = document.getElementById('ep-memo-' + id);
         if (ta) { attachMemoTabKey(ta); autoGrowTextarea(ta); ta.addEventListener('keydown', e => { if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveExpandRow(id);} }); }
+        renderEpCatMulti(id);
+        renderEpTagMulti(id);
+        renderEpLinkedTaskMulti(id);
       }
     }, 60);
   }
@@ -205,8 +226,31 @@ function switchToListAndExpand(taskId) {
   setTimeout(() => { const row = document.getElementById('exp-row-' + taskId); if (row) row.scrollIntoView({behavior:'smooth', block:'center'}); }, 60);
 }
 
-function toggleExpand(id){ expandedId = (expandedId === id) ? null : id; renderLedger(); if(expandedId) setTimeout(() => { const r = document.getElementById('exp-row-' + expandedId); if(r) r.scrollIntoView({behavior:'smooth', block:'nearest'}); }, 60); }
-function collapseExpand(){ expandedId = null; grpExpandedId = null; renderLedger(); }
+function toggleExpand(id){
+  const opening = (expandedId !== id);
+  expandedId = opening ? id : null;
+  if(opening){
+    const t = tasks.find(x => x.id === id);
+    if(t){
+      _epCatState[id] = (t.category||'').split(',').map(s=>s.trim()).filter(Boolean);
+      _epTagState[id] = [...(t.tags||[])];
+      _epLinkedState[id] = [...(t.linkedTaskIds||[])];
+    }
+  }
+  renderLedger();
+  if(expandedId) setTimeout(() => {
+    const r = document.getElementById('exp-row-' + expandedId);
+    if(r) r.scrollIntoView({behavior:'smooth', block:'nearest'});
+    renderEpCatMulti(expandedId);
+    renderEpTagMulti(expandedId);
+    renderEpLinkedTaskMulti(expandedId);
+  }, 60);
+}
+function collapseExpand(){
+  expandedId = null; grpExpandedId = null;
+  // states will be cleared or overwritten on next toggle
+  renderLedger();
+}
 
 function confirmDelete(id) { if (confirm('정말 삭제하시겠습니까?')) { deleteTask(id); renderAll(); toast('삭제되었습니다.'); } }
 
@@ -390,7 +434,6 @@ function _alignTable(lines, cursorLineIdx) {
 function buildExpandPanel(t){
   const priOpts = settings.priorities.map(p => `<option value="${esc(p.key)}" ${t.priority===p.key?'selected':''}>${esc(p.label)}</option>`).join('');
   const stOpts = settings.statuses.map(s => `<option value="${esc(s.key)}" ${t.status===s.key?'selected':''}>${esc(s.label)}</option>`).join('');
-  const catOpts = '<option value="">없음</option>' + settings.categories.map(c => `<option value="${esc(c)}" ${t.category===c?'selected':''}>${esc(c)}</option>`).join('');
   return `<div class="expand-panel">
     <div class="ep-row-3">
       <div class="ep-field"><div class="ep-label">시작일</div><input class="ep-select" type="date" id="ep-start-${t.id}" value="${t.startDate||''}"></div>
@@ -398,8 +441,34 @@ function buildExpandPanel(t){
       <div></div>
     </div>
     <div class="ep-row-3">
-      <div class="ep-field"><div class="ep-label">카테고리 (쉼표 구분)</div><input class="ep-select" id="ep-cat-${t.id}" value="${esc(t.category||'')}" placeholder="카테고리1, 카테고리2, ..."></div>
-      <div class="ep-field"><div class="ep-label">태그 (쉼표 구분)</div><input class="ep-select" id="ep-tags-${t.id}" value="${esc(t.tags.join(', '))}" placeholder="태그1, 태그2, ..."></div>
+      <div class="ep-field">
+        <div class="ep-label">카테고리</div>
+        <div class="tag-multi" id="ep-cat-multi-${t.id}" onclick="toggleEpCatDropdown(event,'${t.id}')">
+          <div class="tag-multi-selected" id="ep-cat-multi-selected-${t.id}">
+            <span class="tag-placeholder" id="ep-cat-placeholder-${t.id}">카테고리 선택...</span>
+          </div>
+          <div class="tag-dropdown" id="ep-cat-dropdown-${t.id}">
+            <div style="padding:8px;position:sticky;top:0;background:var(--s1);border-bottom:1px solid var(--border);z-index:1">
+              <input class="ep-select" id="ep-cat-search-${t.id}" placeholder="카테고리 검색/입력..." oninput="filterEpCats('${t.id}', this.value)" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){ addEpCat(event,'${t.id}',this.value); this.value=''; }">
+            </div>
+            <div id="ep-cat-list-${t.id}"></div>
+          </div>
+        </div>
+      </div>
+      <div class="ep-field">
+        <div class="ep-label">태그</div>
+        <div class="tag-multi" id="ep-tag-multi-${t.id}" onclick="toggleEpTagDropdown(event,'${t.id}')">
+          <div class="tag-multi-selected" id="ep-tag-multi-selected-${t.id}">
+            <span class="tag-placeholder" id="ep-tag-placeholder-${t.id}">태그 선택...</span>
+          </div>
+          <div class="tag-dropdown" id="ep-tag-dropdown-${t.id}">
+            <div style="padding:8px;position:sticky;top:0;background:var(--s1);border-bottom:1px solid var(--border);z-index:1">
+              <input class="ep-select" id="ep-tag-search-${t.id}" placeholder="태그 검색/입력..." oninput="filterEpTags('${t.id}', this.value)" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){ addEpTag(event,'${t.id}',this.value); this.value=''; }">
+            </div>
+            <div id="ep-tag-list-${t.id}"></div>
+          </div>
+        </div>
+      </div>
       <div></div>
     </div>
     <div class="ep-row-3">
@@ -414,9 +483,16 @@ function buildExpandPanel(t){
     </div>
     <div class="link-section">
       <div class="link-section-hd">연결 업무</div>
-      <div class="link-add-row" style="flex-direction:column;gap:4px">
-        <input class="ep-select" id="ep-link-search-${t.id}" placeholder="제목 또는 ID 검색..." oninput="filterLinkOptions('${t.id}')">
-        <div style="display:flex;gap:6px"><select class="ep-select" id="ep-link-sel-${t.id}" style="flex:1">${buildLinkOptions(t)}</select><button class="btn btn-ghost btn-sm" onclick="addTaskLink('${t.id}')">연결 추가</button></div>
+      <div class="tag-multi" id="ep-linked-multi-${t.id}" onclick="toggleEpLinkedDropdown(event,'${t.id}')">
+        <div class="tag-multi-selected" id="ep-linked-multi-selected-${t.id}">
+          <span class="tag-placeholder" id="ep-linked-placeholder-${t.id}">연결할 업무 선택...</span>
+        </div>
+        <div class="tag-dropdown" id="ep-linked-dropdown-${t.id}">
+          <div style="padding:8px;position:sticky;top:0;background:var(--s1);border-bottom:1px solid var(--border);z-index:1">
+            <input class="ep-select" id="ep-linked-search-${t.id}" placeholder="제목/ID 검색..." oninput="filterEpLinkedTasks('${t.id}', this.value)" onclick="event.stopPropagation()">
+          </div>
+          <div id="ep-linked-task-list-${t.id}"></div>
+        </div>
       </div>
       <div class="link-list" id="ep-link-list-${t.id}">${buildLinkList(t)}</div>
     </div>
@@ -429,13 +505,267 @@ function buildExpandPanel(t){
 
 function saveExpandRow(id){
   const g = sid => { const el = document.getElementById(sid); return el ? el.value : ''; };
+  const categories = _epCatState[id] ? _epCatState[id].join(', ') : '';
+  const tags = _epTagState[id] || [];
+  const linkedTaskIds = _epLinkedState[id] || [];
+  
   updateTask(id, {
     startDate: g(`ep-start-${id}`)||null, dueDate: g(`ep-due-${id}`)||null,
-    tags: g(`ep-tags-${id}`).split(',').map(t => t.trim()).filter(Boolean),
-    category: g(`ep-cat-${id}`), priority: g(`ep-pri-${id}`), status: g(`ep-status-${id}`),
+    tags: tags,
+    category: categories,
+    priority: g(`ep-pri-${id}`), 
+    status: g(`ep-status-${id}`),
     memo: g(`ep-memo-${id}`),
+    linkedTaskIds: linkedTaskIds
   });
   renderAll(); toast('저장 완료');
+}
+
+// ── EP Multi-select Helpers ───────────────────────────
+function renderEpTagMulti(taskId) {
+  const sel = document.getElementById(`ep-tag-multi-selected-${taskId}`);
+  const ph  = document.getElementById(`ep-tag-placeholder-${taskId}`);
+  const tags = _epTagState[taskId] || [];
+  if (!sel) return;
+  sel.querySelectorAll('.tag-pill').forEach(el => el.remove());
+  if (tags.length === 0) {
+    if (ph) ph.style.display = '';
+  } else {
+    if (ph) ph.style.display = 'none';
+    tags.forEach(tag => {
+      const pill = document.createElement('div');
+      pill.className = 'tag-pill';
+      pill.innerHTML = `${esc(tag)} <span class="tag-pill-x" onclick="removeEpTag(event,'${taskId}','${esc(tag)}')">✕</span>`;
+      sel.insertBefore(pill, ph);
+    });
+  }
+  _refreshEpTagDd(taskId);
+}
+function _refreshEpTagDd(taskId, query) {
+  const wrap = document.getElementById(`ep-tag-list-${taskId}`);
+  if (!wrap) return;
+  const q = (query || '').trim().toLowerCase();
+  const selected = _epTagState[taskId] || [];
+  const allTags = [...new Set([...settings.tags, ...tasks.flatMap(t => t.tags || [])])].sort();
+  const list = allTags.filter(t => !q || t.toLowerCase().includes(q));
+
+  wrap.innerHTML = list.length
+    ? list.map(tag => {
+        const isSel = selected.includes(tag);
+        return `<div class="tag-option ${isSel?'selected':''}" onclick="toggleEpTag(event,'${taskId}','${esc(tag)}')">
+          <div class="tag-check">${isSel?'✓':''}</div>${esc(tag)}
+        </div>`;
+      }).join('')
+    : '<div style="padding:8px 12px;font-size:12px;color:var(--text3)">태그 없음</div>';
+}
+function toggleEpTagDropdown(e, taskId) {
+  if (e) e.stopPropagation();
+  const dd = document.getElementById(`ep-tag-dropdown-${taskId}`);
+  if (!dd) return;
+  const isOpen = dd.classList.contains('open');
+  dd.classList.toggle('open');
+  if (!isOpen) {
+    const si = document.getElementById(`ep-tag-search-${taskId}`);
+    if (si) { si.value = ''; si.focus(); }
+    _refreshEpTagDd(taskId, '');
+  }
+  // Close other dropdowns
+  document.querySelectorAll('.tag-dropdown.open').forEach(el => {
+    if (el !== dd) el.classList.remove('open');
+  });
+}
+function filterEpTags(taskId, q) {
+  _refreshEpTagDd(taskId, q);
+}
+function toggleEpTag(e, taskId, tag) {
+  if (e) e.stopPropagation();
+  if (!_epTagState[taskId]) _epTagState[taskId] = [];
+  const idx = _epTagState[taskId].indexOf(tag);
+  if (idx >= 0) _epTagState[taskId].splice(idx, 1);
+  else _epTagState[taskId].push(tag);
+  renderEpTagMulti(taskId);
+}
+function addEpTag(e, taskId, tag) {
+  if (e) e.stopPropagation();
+  const t = tag.trim();
+  if (!t) return;
+  if (!_epTagState[taskId]) _epTagState[taskId] = [];
+  if (!_epTagState[taskId].includes(t)) {
+    _epTagState[taskId].push(t);
+    renderEpTagMulti(taskId);
+  }
+}
+function removeEpTag(e, taskId, tag) {
+  if (e) e.stopPropagation();
+  if (_epTagState[taskId]) {
+    _epTagState[taskId] = _epTagState[taskId].filter(t => t !== tag);
+    renderEpTagMulti(taskId);
+  }
+}
+
+function renderEpCatMulti(taskId) {
+  const sel = document.getElementById(`ep-cat-multi-selected-${taskId}`);
+  const ph  = document.getElementById(`ep-cat-placeholder-${taskId}`);
+  const cats = _epCatState[taskId] || [];
+  if (!sel) return;
+  sel.querySelectorAll('.tag-pill').forEach(el => el.remove());
+  if (cats.length === 0) {
+    if (ph) ph.style.display = '';
+  } else {
+    if (ph) ph.style.display = 'none';
+    cats.forEach(cat => {
+      const pill = document.createElement('div');
+      pill.className = 'tag-pill';
+      pill.innerHTML = `${esc(cat)} <span class="tag-pill-x" onclick="removeEpCat(event,'${taskId}','${esc(cat)}')">✕</span>`;
+      sel.insertBefore(pill, ph);
+    });
+  }
+  _refreshEpCatDd(taskId);
+}
+function _refreshEpCatDd(taskId, query) {
+  const wrap = document.getElementById(`ep-cat-list-${taskId}`);
+  if (!wrap) return;
+  const q = (query || '').trim().toLowerCase();
+  const selected = _epCatState[taskId] || [];
+  const allCats = [...new Set([...settings.categories, ...tasks.flatMap(t => (t.category||'').split(',').map(s=>s.trim()).filter(Boolean))])].sort();
+  const list = allCats.filter(c => !q || c.toLowerCase().includes(q));
+
+  wrap.innerHTML = list.length
+    ? list.map(cat => {
+        const isSel = selected.includes(cat);
+        return `<div class="tag-option ${isSel?'selected':''}" onclick="toggleEpCat(event,'${taskId}','${esc(cat)}')">
+          <div class="tag-check">${isSel?'✓':''}</div>${esc(cat)}
+        </div>`;
+      }).join('')
+    : '<div style="padding:8px 12px;font-size:12px;color:var(--text3)">카테고리 없음</div>';
+}
+function toggleEpCatDropdown(e, taskId) {
+  if (e) e.stopPropagation();
+  const dd = document.getElementById(`ep-cat-dropdown-${taskId}`);
+  if (!dd) return;
+  const isOpen = dd.classList.contains('open');
+  dd.classList.toggle('open');
+  if (!isOpen) {
+    const si = document.getElementById(`ep-cat-search-${taskId}`);
+    if (si) { si.value = ''; si.focus(); }
+    _refreshEpCatDd(taskId, '');
+  }
+  // Close other dropdowns
+  document.querySelectorAll('.tag-dropdown.open').forEach(el => {
+    if (el !== dd) el.classList.remove('open');
+  });
+}
+function filterEpCats(taskId, q) {
+  _refreshEpCatDd(taskId, q);
+}
+function toggleEpCat(e, taskId, cat) {
+  if (e) e.stopPropagation();
+  if (!_epCatState[taskId]) _epCatState[taskId] = [];
+  const idx = _epCatState[taskId].indexOf(cat);
+  if (idx >= 0) _epCatState[taskId].splice(idx, 1);
+  else _epCatState[taskId].push(cat);
+  renderEpCatMulti(taskId);
+}
+function addEpCat(e, taskId, cat) {
+  if (e) e.stopPropagation();
+  const c = cat.trim();
+  if (!c) return;
+  if (!_epCatState[taskId]) _epCatState[taskId] = [];
+  if (!_epCatState[taskId].includes(c)) {
+    _epCatState[taskId].push(c);
+    renderEpCatMulti(taskId);
+  }
+}
+function removeEpCat(e, taskId, cat) {
+  if (e) e.stopPropagation();
+  if (_epCatState[taskId]) {
+    _epCatState[taskId] = _epCatState[taskId].filter(c => c !== cat);
+    renderEpCatMulti(taskId);
+  }
+}
+
+function renderEpLinkedTaskMulti(taskId) {
+  const sel = document.getElementById(`ep-linked-multi-selected-${taskId}`);
+  const ph  = document.getElementById(`ep-linked-placeholder-${taskId}`);
+  const linked = _epLinkedState[taskId] || [];
+  if (!sel) return;
+  sel.querySelectorAll('.tag-pill').forEach(el => el.remove());
+  if (linked.length === 0) {
+    if (ph) ph.style.display = '';
+  } else {
+    if (ph) ph.style.display = 'none';
+    linked.forEach(tid => {
+      const t = tasks.find(x => x.id === tid);
+      if (!t) return;
+      const pill = document.createElement('div');
+      pill.className = 'tag-pill';
+      pill.innerHTML = `${esc(t.title)} <span class="tag-pill-x" onclick="removeEpLinkedTask(event,'${taskId}','${esc(tid)}')">✕</span>`;
+      sel.insertBefore(pill, ph);
+    });
+  }
+}
+function _refreshEpLinkedTaskList(taskId, query) {
+  const wrap = document.getElementById(`ep-linked-task-list-${taskId}`);
+  if (!wrap) return;
+  const q = (query || '').trim().toLowerCase();
+  const linked = _epLinkedState[taskId] || [];
+  const list = tasks.filter(t =>
+    t.id !== taskId &&
+    !t.linkedSourceType &&
+    t.status !== 'archived' &&
+    (!q || t.title.toLowerCase().includes(q) || (t.category||'').toLowerCase().includes(q))
+  );
+  const stMap = {};
+  (settings.statuses || []).forEach(s => { stMap[s.key] = s.label; });
+  wrap.innerHTML = list.length
+    ? list.map(t => {
+        const isSel = linked.includes(t.id);
+        const meta = [t.category, stMap[t.status] || t.status].filter(Boolean).join(' · ');
+        return `<div class="tag-option ${isSel?'selected':''}" onclick="toggleEpLinkedTask(event,'${taskId}','${esc(t.id)}')">
+          <div class="tag-check">${isSel?'✓':''}</div>
+          <div style="overflow:hidden">
+            <div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</div>
+            ${meta?`<div style="font-size:11px;color:var(--text3);margin-top:1px">${esc(meta)}</div>`:''}
+          </div>
+        </div>`;
+      }).join('')
+    : '<div style="padding:8px 12px;font-size:12px;color:var(--text3)">업무 없음</div>';
+}
+function toggleEpLinkedDropdown(e, taskId) {
+  if (e) e.stopPropagation();
+  const dd = document.getElementById(`ep-linked-dropdown-${taskId}`);
+  if (!dd) return;
+  const isOpen = dd.classList.contains('open');
+  dd.classList.toggle('open');
+  if (!isOpen) {
+    const si = document.getElementById(`ep-linked-search-${taskId}`);
+    if (si) { si.value = ''; si.focus(); }
+    _refreshEpLinkedTaskList(taskId, '');
+  }
+  // Close other dropdowns
+  document.querySelectorAll('.tag-dropdown.open').forEach(el => {
+    if (el !== dd) el.classList.remove('open');
+  });
+}
+function filterEpLinkedTasks(taskId, q) {
+  _refreshEpLinkedTaskList(taskId, q);
+}
+function toggleEpLinkedTask(e, taskId, targetId) {
+  if (e) e.stopPropagation();
+  if (!_epLinkedState[taskId]) _epLinkedState[taskId] = [];
+  const idx = _epLinkedState[taskId].indexOf(targetId);
+  if (idx >= 0) _epLinkedState[taskId].splice(idx, 1);
+  else _epLinkedState[taskId].push(targetId);
+  renderEpLinkedTaskMulti(taskId);
+  const si = document.getElementById(`ep-linked-search-${taskId}`);
+  _refreshEpLinkedTaskList(taskId, si ? si.value : '');
+}
+function removeEpLinkedTask(e, taskId, targetId) {
+  if (e) e.stopPropagation();
+  if (_epLinkedState[taskId]) {
+    _epLinkedState[taskId] = _epLinkedState[taskId].filter(id => id !== targetId);
+    renderEpLinkedTaskMulti(taskId);
+  }
 }
 
 // ── TASK LINK ─────────────────────────────────────────

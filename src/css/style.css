@@ -222,11 +222,11 @@ td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertic
 tr.data-row:hover td{background:rgba(0,0,0,.08);}
 [data-theme="light"] tr.data-row:hover td{background:rgba(0,0,0,.04);}
 .td-id{font-family:var(--mono);font-size:10px;color:var(--text3);white-space:nowrap;}
-/* 제목 컬럼 말줄임 (min-width 920px 기준으로 최대 폭 제한) */
-.td-title{width:28%;max-width:280px;}
+/* 제목 컬럼 말줄임 (공간 충분히 확보) */
+.td-title{width:auto; min-width: 200px;}
 .td-title-inner{display:flex;align-items:center;gap:6px;overflow:hidden;}
 .td-title-text{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;}
-.td-date{font-family:var(--mono);font-size:11px;color:var(--text2);white-space:nowrap;}
+.td-date{font-family:var(--mono);font-size:11px;color:var(--text2);white-space:nowrap;min-width:70px;}
 .td-date.overdue{color:var(--red);}
 .td-actions{display:flex;gap:4px;align-items:center;white-space:nowrap;}
 .td-nowrap{white-space:nowrap;}
@@ -542,16 +542,15 @@ input[type="date"].field-input{appearance:none;-webkit-appearance:none;}
 .grp-header.open .grp-chevron{transform:rotate(90deg);}
 .grp-body{display:none;border-top:1px solid var(--border);}
 .grp-header.open + .grp-body{display:block;}
-.grp-table{width:100%;border-collapse:collapse;table-layout:fixed;}
+.grp-table{width:100%;border-collapse:collapse;table-layout:auto;}
 .grp-table th, .grp-table td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.grp-table th{white-space:nowrap;}
+.grp-table th{white-space:nowrap;padding:10px;font-size:11px;background:var(--s1);color:var(--text2);border-bottom:1px solid var(--border);}
 .grp-table td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle;}
 .grp-table tr:last-child td{border-bottom:none;}
 .grp-table tr:hover td{background:var(--s2);cursor:pointer;}
-.grp-row-id{font-family:var(--mono);font-size:10px;color:var(--text3);}
-.grp-row-title{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;max-width:100%;vertical-align:middle;}
-.grp-row-tags{display:flex;gap:3px;flex-wrap:nowrap;}
-.grp-row-date{font-family:var(--mono);font-size:11px;color:var(--text2);white-space:nowrap;}
+.grp-row-id{font-family:var(--mono);font-size:10px;color:var(--text3);min-width:40px;}
+.grp-row-tags{display:flex;gap:3px;flex-wrap:nowrap;min-width:80px;}
+.grp-row-date{font-family:var(--mono);font-size:11px;color:var(--text2);white-space:nowrap;min-width:75px;}
 .grp-row-date.overdue{color:var(--red);}
 /* INVENTORY */
 .inv-layout{display:flex;flex:1;min-height:0;overflow:hidden;}

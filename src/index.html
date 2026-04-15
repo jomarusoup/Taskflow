@@ -605,7 +605,12 @@
       <div class="field-row">
         <div class="field">
           <div class="field-label">카테고리</div>
-          <select class="field-select" id="f-cat"></select>
+          <div class="tag-multi" id="cat-multi" onclick="toggleCatDropdown(event)">
+            <div class="tag-multi-selected" id="cat-multi-selected">
+              <span class="tag-placeholder" id="cat-placeholder">카테고리 선택...</span>
+            </div>
+            <div class="tag-dropdown" id="cat-dropdown"></div>
+          </div>
         </div>
         <div class="field">
           <div class="field-label">태그</div>
@@ -634,6 +639,20 @@
             <span class="tag-placeholder" id="assignee-placeholder">담당자 선택...</span>
           </div>
           <div class="tag-dropdown" id="assignee-dropdown"></div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-label">연결업무</div>
+        <div class="tag-multi" id="linked-multi" onclick="toggleLinkedDropdown(event)">
+          <div class="tag-multi-selected" id="linked-multi-selected">
+            <span class="tag-placeholder" id="linked-placeholder">업무를 검색하여 연결...</span>
+          </div>
+          <div class="tag-dropdown" id="linked-dropdown" style="padding-top:0">
+            <div style="padding:6px 8px;position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);z-index:1">
+              <input id="linked-search" placeholder="업무 제목 검색..." onclick="event.stopPropagation()" oninput="filterLinkedTasks(this.value)" style="width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:12px;outline:none">
+            </div>
+            <div id="linked-task-list"></div>
+          </div>
         </div>
       </div>
       <div class="field">
