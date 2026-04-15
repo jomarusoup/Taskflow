@@ -11,7 +11,8 @@ function renderKanban(){
   const badge = document.getElementById('badge-kanban');
   if (!board) return;
 
-  const activeTasks = tasks.filter(t => !t.linkedSourceType && t.status !== 'archived');
+  // archived 상태도 칸반 컬럼에 표시 (showInKanban 설정으로 제어)
+  const activeTasks = tasks.filter(t => !t.linkedSourceType);
   if (badge) badge.textContent = activeTasks.filter(t => t.status === 'inprogress').length;
 
   board.innerHTML=COLS.map(col=>{

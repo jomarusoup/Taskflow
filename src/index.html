@@ -119,49 +119,47 @@
           </div>
         </div>
       </div>
+      <!-- 퀵 현황 패널 (캘린더 위) -->
+      <div class="dash-quick-panel" id="dash-quick-panel">
+        <div class="quick-section">
+          <div class="quick-section-hd">기한 초과<span class="qcount" id="qcount-overdue">0</span></div>
+          <div id="qlist-overdue"></div>
+        </div>
+        <div class="quick-section">
+          <div class="quick-section-hd">오늘 마감<span class="qcount" id="qcount-today">0</span></div>
+          <div id="qlist-today"></div>
+        </div>
+        <div class="quick-section">
+          <div class="quick-section-hd">오늘 완료<span class="qcount" id="qcount-done">0</span></div>
+          <div id="qlist-done"></div>
+        </div>
+        <div class="quick-section">
+          <div class="quick-section-hd">오늘 일정<span class="qcount" id="qcount-schedule">0</span></div>
+          <div id="qlist-schedule"></div>
+        </div>
+      </div>
       <div class="dash-cal-row">
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <div class="cal-wrap">
-            <div class="cal-header">
-              <button class="cal-nav-btn" onclick="calMove(-1)">‹</button>
-              <div class="cal-month-label" id="cal-month-label"></div>
-              <button class="cal-nav-btn" onclick="calMove(1)">›</button>
-              <button class="cal-today-btn" onclick="calGoToday()">오늘</button>
-            </div>
-            <div class="cal-dow-row">
-              <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
-            </div>
-            <div class="cal-grid-wrap">
-              <div class="cal-grid" id="cal-grid"></div>
-              <div class="cal-events-layer" id="cal-events-layer"></div>
-            </div>
+        <div class="cal-wrap">
+          <div class="cal-header">
+            <button class="cal-nav-btn" onclick="calMove(-1)">‹</button>
+            <div class="cal-month-label" id="cal-month-label"></div>
+            <button class="cal-nav-btn" onclick="calMove(1)">›</button>
+            <button class="cal-today-btn" onclick="calGoToday()">오늘</button>
           </div>
-          <div class="cal-detail" id="cal-detail" style="display:none">
-            <div class="cal-detail-header">
-              <span class="cal-detail-date" id="cal-detail-date"></span>
-              <button class="cal-detail-close" onclick="closeCalDetail()">✕</button>
-            </div>
-            <div class="cal-detail-list" id="cal-detail-list"></div>
+          <div class="cal-dow-row">
+            <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+          </div>
+          <div class="cal-grid-wrap">
+            <div class="cal-grid" id="cal-grid"></div>
+            <div class="cal-events-layer" id="cal-events-layer"></div>
           </div>
         </div>
-        <!-- 퀵 현황 패널 -->
-        <div class="dash-quick-panel" id="dash-quick-panel">
-          <div class="quick-section">
-            <div class="quick-section-hd">기한 초과<span class="qcount" id="qcount-overdue">0</span></div>
-            <div id="qlist-overdue"></div>
+        <div class="cal-detail" id="cal-detail" style="display:none">
+          <div class="cal-detail-header">
+            <span class="cal-detail-date" id="cal-detail-date"></span>
+            <button class="cal-detail-close" onclick="closeCalDetail()">✕</button>
           </div>
-          <div class="quick-section">
-            <div class="quick-section-hd">오늘 마감<span class="qcount" id="qcount-today">0</span></div>
-            <div id="qlist-today"></div>
-          </div>
-          <div class="quick-section">
-            <div class="quick-section-hd">오늘 완료<span class="qcount" id="qcount-done">0</span></div>
-            <div id="qlist-done"></div>
-          </div>
-          <div class="quick-section">
-            <div class="quick-section-hd">오늘 일정<span class="qcount" id="qcount-schedule">0</span></div>
-            <div id="qlist-schedule"></div>
-          </div>
+          <div class="cal-detail-list" id="cal-detail-list"></div>
         </div>
       </div>
 
@@ -637,6 +635,10 @@
           </div>
           <div class="tag-dropdown" id="assignee-dropdown"></div>
         </div>
+      </div>
+      <div class="field">
+        <div class="field-label">메모</div>
+        <textarea class="field-input memo-textarea" id="f-memo" placeholder="메모를 입력하세요..." style="min-height:80px" oninput="autoGrowTextarea(this)"></textarea>
       </div>
     </div>
     <div class="modal-foot">

@@ -20,6 +20,7 @@ function openModal(id = null, defaultStatus = 'todo') {
     document.getElementById('f-status').value    = t.status;
     document.getElementById('f-start').value     = t.startDate || '';
     document.getElementById('f-due').value       = t.dueDate   || '';
+    const memoEl = document.getElementById('f-memo'); if (memoEl) { memoEl.value = t.memo || ''; autoGrowTextarea(memoEl); }
     selectedTags = [...(t.tags || [])];
     _populateAssignee(t.category, t.assigneeIds || []);
   } else {
@@ -29,6 +30,7 @@ function openModal(id = null, defaultStatus = 'todo') {
     document.getElementById('f-status').value   = defaultStatus;
     document.getElementById('f-start').value    = '';
     document.getElementById('f-due').value      = '';
+    const memoEl = document.getElementById('f-memo'); if (memoEl) { memoEl.value = ''; memoEl.style.height = ''; }
     selectedTags = [];
     _populateAssignee('', []);
   }
@@ -146,6 +148,7 @@ function saveTask() {
     startDate:  document.getElementById('f-start').value || null,
     dueDate:    document.getElementById('f-due').value   || null,
     assigneeIds: [...selectedAssignees],
+    memo: document.getElementById('f-memo')?.value || '',
   };
   if (editingId) { updateTask(editingId, data); toast('수정 완료'); }
   else           { createTask(data);            toast('업무 추가 완료'); }

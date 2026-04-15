@@ -6,12 +6,13 @@ let ledgerMode = 'list'; // 'list' | 'group'
 let ledgerSort = { key: 'id', dir: -1 };
 let grpSort = {}; // {category: {key, dir}}
 let grpOpen = new Set();
+let grpExpandedId = null; // 그룹 모드 인라인 상세
 const mselState = { status: new Set(), priority: new Set(), cat: new Set() };
 
 function setLedgerMode(mode) {
   ledgerMode = mode;
-  const listBtn = document.getElementById('ledger-mode-list');
-  const groupBtn = document.getElementById('ledger-mode-group');
+  const listBtn = document.getElementById('ledger-toggle-list');
+  const groupBtn = document.getElementById('ledger-toggle-group');
   if (listBtn) listBtn.classList.toggle('active', mode === 'list');
   if (groupBtn) groupBtn.classList.toggle('active', mode === 'group');
   renderLedger();
@@ -90,6 +91,7 @@ function renderLedger(){
     const ta = document.getElementById('ep-memo-' + expandedId);
     if (ta) {
       attachMemoTabKey(ta);
+      autoGrowTextarea(ta);
       ta.addEventListener('keydown', e => { if((e.ctrlKey||e.metaKey) && e.key === 's'){ e.preventDefault(); saveExpandRow(expandedId); } });
     }
   }
@@ -101,8 +103,13 @@ function _renderLedgerGroup(list) {
   if (!wrap) return;
   if (!list.length) { wrap.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);font-size:13px">조건에 맞는 업무 없음</div>'; return; }
 
+  // 다중 카테고리: category 필드를 쉼표로 분리해 각 그룹에 배치
   const groups = {};
-  list.forEach(t => { const cat = t.category || '미분류'; if (!groups[cat]) groups[cat] = []; groups[cat].push(t); });
+  list.forEach(t => {
+    const cats = (t.category || '').split(',').map(c => c.trim()).filter(Boolean);
+    if (!cats.length) cats.push('미분류');
+    cats.forEach(cat => { if (!groups[cat]) groups[cat] = []; groups[cat].push(t); });
+  });
   const orderedCats = [ ...settings.categories.filter(c => groups[c]), ...(groups['미분류'] ? ['미분류'] : []) ];
   if (grpOpen.size === 0) orderedCats.forEach(c => grpOpen.add(c));
 
@@ -113,14 +120,16 @@ function _renderLedgerGroup(list) {
     const overdueCount = items.filter(t => isOverdue(t)).length;
 
     const rows = items.map(t => {
+      const isExp = grpExpandedId === t.id;
       const ovd = isOverdue(t);
       const tags = t.tags.slice(0,3).map(tg => `<span class="tag">${esc(tg)}</span>`).join('');
       const assigneeNames = (t.assigneeIds||[]).map(id => { const c = contacts.find(x => x.id === id); return c ? esc(c.name) : null; }).filter(Boolean);
       const assigneeLabel = assigneeNames.length ? assigneeNames.join(', ') : '—';
       const accentBar = `<div style="display:inline-block;width:3px;height:14px;border-radius:2px;background:${accentColor(t.priority)};vertical-align:middle;margin-right:6px;flex-shrink:0"></div>`;
-      return `<tr onclick="switchToListAndExpand('${esc(t.id)}')">
+      const expandRows = isExp ? `<tr class="expand-row open" id="grp-exp-row-${t.id}"><td colspan="9" style="padding:0">${buildExpandPanel(t)}</td></tr>` : '';
+      return `<tr class="data-row" onclick="toggleGrpExpand('${esc(t.id)}')">
         <td class="grp-row-id">${t.id}</td>
-        <td>${accentBar}<span class="grp-row-title">${esc(t.title)}</span></td>
+        <td><button class="expand-btn ${isExp?'open':''}" style="margin-right:4px" onclick="event.stopPropagation();toggleGrpExpand('${esc(t.id)}')">▶</button>${accentBar}<span class="grp-row-title">${esc(t.title)}</span></td>
         <td class="grp-row-date">${fmtDate(t.startDate)}</td>
         <td class="grp-row-date ${ovd?'overdue':''}">${fmtDate(t.dueDate)}</td>
         <td><span class="pri" style="${priStyle(t.priority)}">${priLabel(t.priority)}</span></td>
@@ -128,7 +137,7 @@ function _renderLedgerGroup(list) {
         <td style="font-size:11px;color:var(--text2)">${assigneeLabel}</td>
         <td><div class="grp-row-tags">${tags}</div></td>
         <td class="grp-row-date">${t.completedAt?fmtDate(t.completedAt.split('T')[0]):''}</td>
-      </tr>`;
+      </tr>${expandRows}`;
     }).join('');
 
     const pct = items.length ? Math.round(doneCount/items.length*100) : 0;
@@ -174,6 +183,21 @@ function toggleGrp(cat) {
   headers.forEach(h => { if (h.getAttribute('onclick') === `toggleGrp('${cat}')`) h.classList.toggle('open'); });
 }
 
+function toggleGrpExpand(id) {
+  grpExpandedId = (grpExpandedId === id) ? null : id;
+  renderLedger();
+  if (grpExpandedId === id) {
+    setTimeout(() => {
+      const row = document.getElementById('grp-exp-row-' + id);
+      if (row) {
+        row.scrollIntoView({behavior:'smooth', block:'nearest'});
+        const ta = document.getElementById('ep-memo-' + id);
+        if (ta) { attachMemoTabKey(ta); autoGrowTextarea(ta); ta.addEventListener('keydown', e => { if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveExpandRow(id);} }); }
+      }
+    }, 60);
+  }
+}
+
 function switchToListAndExpand(taskId) {
   setLedgerMode('list');
   expandedId = taskId;
@@ -182,7 +206,7 @@ function switchToListAndExpand(taskId) {
 }
 
 function toggleExpand(id){ expandedId = (expandedId === id) ? null : id; renderLedger(); if(expandedId) setTimeout(() => { const r = document.getElementById('exp-row-' + expandedId); if(r) r.scrollIntoView({behavior:'smooth', block:'nearest'}); }, 60); }
-function collapseExpand(){ expandedId = null; renderLedger(); }
+function collapseExpand(){ expandedId = null; grpExpandedId = null; renderLedger(); }
 
 function confirmDelete(id) { if (confirm('정말 삭제하시겠습니까?')) { deleteTask(id); renderAll(); toast('삭제되었습니다.'); } }
 
@@ -309,6 +333,13 @@ function startTitleEdit(id, spanEl) {
 }
 
 // ── EXPAND PANEL HELPERS ──────────────────────────────
+// 메모 textarea 자동 높이 조절
+function autoGrowTextarea(ta) {
+  if (!ta) return;
+  ta.style.height = 'auto';
+  ta.style.height = Math.max(ta.scrollHeight, 80) + 'px';
+}
+
 function attachMemoTabKey(ta) {
   if (!ta || ta._tabBound) return;
   ta._tabBound = true;
@@ -367,7 +398,7 @@ function buildExpandPanel(t){
       <div></div>
     </div>
     <div class="ep-row-3">
-      <div class="ep-field"><div class="ep-label">카테고리</div><select class="ep-select" id="ep-cat-${t.id}">${catOpts}</select></div>
+      <div class="ep-field"><div class="ep-label">카테고리 (쉼표 구분)</div><input class="ep-select" id="ep-cat-${t.id}" value="${esc(t.category||'')}" placeholder="카테고리1, 카테고리2, ..."></div>
       <div class="ep-field"><div class="ep-label">태그 (쉼표 구분)</div><input class="ep-select" id="ep-tags-${t.id}" value="${esc(t.tags.join(', '))}" placeholder="태그1, 태그2, ..."></div>
       <div></div>
     </div>
@@ -383,11 +414,14 @@ function buildExpandPanel(t){
     </div>
     <div class="link-section">
       <div class="link-section-hd">연결 업무</div>
-      <div class="link-add-row"><select class="ep-select" id="ep-link-sel-${t.id}" style="flex:1">${buildLinkOptions(t)}</select><button class="btn btn-ghost btn-sm" onclick="addTaskLink('${t.id}')">연결 추가</button></div>
+      <div class="link-add-row" style="flex-direction:column;gap:4px">
+        <input class="ep-select" id="ep-link-search-${t.id}" placeholder="제목 또는 ID 검색..." oninput="filterLinkOptions('${t.id}')">
+        <div style="display:flex;gap:6px"><select class="ep-select" id="ep-link-sel-${t.id}" style="flex:1">${buildLinkOptions(t)}</select><button class="btn btn-ghost btn-sm" onclick="addTaskLink('${t.id}')">연결 추가</button></div>
+      </div>
       <div class="link-list" id="ep-link-list-${t.id}">${buildLinkList(t)}</div>
     </div>
     <div class="memo-section"><div class="memo-header"><div class="memo-label">메모</div><button class="btn btn-ghost btn-sm" onclick="copyMemo('${t.id}')" title="메모 복사">복사</button></div>
-      <textarea class="memo-textarea" id="ep-memo-${t.id}" placeholder="메모를 입력하세요..." onblur="saveExpandRow('${t.id}')">${esc(t.memo||'')}</textarea>
+      <textarea class="memo-textarea" id="ep-memo-${t.id}" placeholder="메모를 입력하세요..." oninput="autoGrowTextarea(this)" onblur="saveExpandRow('${t.id}')">${esc(t.memo||'')}</textarea>
     </div>
     <div class="ep-footer"><span class="ep-save-hint">Ctrl+S — 저장</span><button class="btn btn-ghost btn-sm" onclick="collapseExpand()">닫기</button><button class="btn btn-primary btn-sm" onclick="saveExpandRow('${t.id}')">저장</button></div>
   </div>`;
@@ -405,11 +439,24 @@ function saveExpandRow(id){
 }
 
 // ── TASK LINK ─────────────────────────────────────────
-function buildLinkOptions(t){
+function buildLinkOptions(t, query){
   const linked = t.linkedTaskIds || [];
-  const candidates = tasks.filter(x => x.id !== t.id && !linked.includes(x.id) && !x.linkedSourceType);
+  let candidates = tasks.filter(x => x.id !== t.id && !linked.includes(x.id) && !x.linkedSourceType);
+  if(query) {
+    const q = query.toLowerCase();
+    candidates = candidates.filter(x => x.id.toLowerCase().includes(q) || x.title.toLowerCase().includes(q));
+  }
+  // ID 기준 정렬
+  candidates.sort((a, b) => a.id.localeCompare(b.id, undefined, {numeric:true}));
   if(!candidates.length) return '<option value="">연결 가능한 업무 없음</option>';
   return '<option value="">업무 선택...</option>' + candidates.map(x => `<option value="${esc(x.id)}">[${esc(x.id)}] ${esc(x.title)}</option>`).join('');
+}
+function filterLinkOptions(taskId){
+  const searchEl = document.getElementById('ep-link-search-' + taskId);
+  const sel = document.getElementById('ep-link-sel-' + taskId);
+  if(!searchEl || !sel) return;
+  const t = tasks.find(x => x.id === taskId); if(!t) return;
+  sel.innerHTML = buildLinkOptions(t, searchEl.value);
 }
 function buildLinkList(t){
   const linked = t.linkedTaskIds || [];
@@ -470,7 +517,19 @@ function removeTaskContact(taskId, cid){
 }
 
 function jumpToLinkedTask(targetId){ switchView('ledger'); setTimeout(() => { expandedId = targetId; renderLedger(); const row = document.getElementById('exp-row-' + targetId); if(row) row.scrollIntoView({behavior:'smooth', block:'center'}); }, 80); }
-function jumpToLedger(taskId) { switchView('ledger'); setTimeout(() => { expandedId = taskId; renderLedger(); const row = document.querySelector(`.data-row td:first-child`); if (row) row.scrollIntoView({behavior:'smooth', block:'center'}); }, 100); }
+function jumpToLedger(taskId) {
+  // 필터 초기화 후 리스트 모드로 이동
+  mselState.status.clear(); mselState.priority.clear(); mselState.cat.clear();
+  const searchEl = document.getElementById('ledger-search'); if (searchEl) searchEl.value = '';
+  ledgerMode = 'list';
+  switchView('ledger');
+  setTimeout(() => {
+    expandedId = taskId;
+    renderLedger();
+    const row = document.getElementById('exp-row-' + taskId);
+    if (row) row.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 100);
+}
 
 /******************************************************************************
 FUNCTION    : exportCSV

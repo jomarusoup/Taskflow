@@ -162,18 +162,9 @@ function renderCalendar() {
     if(t.status==='archived')return;
     if(hiddenStatuses.has(t.status))return;
     if(t.linkedSourceType==='recurring')return;
-    if(t.startDate)addEv(t.startDate,t,'start');
-    if(t.dueDate)addEv(t.dueDate,t,'due');
-    if(t.startDate&&t.dueDate&&t.startDate<t.dueDate){
-      let cur=new Date(t.startDate);cur.setDate(cur.getDate()+1);
-      const end=new Date(t.dueDate);
-      while(cur<end){
-        const ds=cur.toISOString().split('T')[0];
-        if(!evMap[ds])evMap[ds]=[];
-        if(!evMap[ds].some(e=>e.task.id===t.id))evMap[ds].push({task:t,type:'range'});
-        cur.setDate(cur.getDate()+1);
-      }
-    }
+    // 마감일 기준으로만 표시 (마감일 없으면 시작일)
+    const d = t.dueDate || t.startDate;
+    if(d) addEv(d, t, t.dueDate ? 'due' : 'start');
   });
 
   const total=Math.ceil((firstDay+daysInMonth)/7)*7;
@@ -243,7 +234,6 @@ function _renderEventBars(cellDates, total, firstDay, evMap, _retry) {
     'var(--blue)':'#6AADFF','var(--green)':'#3DDC97'
   };
   function resolveColor(t) {
-    if (isOverdue(t)) return '#E05C6A';
     const c = accentColor(t.priority);
     return colorMap[c] || c;
   }
@@ -258,16 +248,10 @@ function _renderEventBars(cellDates, total, firstDay, evMap, _retry) {
     if (hiddenStatuses.has(t.status)) return;
     if (t.linkedSourceType === 'recurring') return;
     if (!t.startDate && !t.dueDate) return;
-    const taskStart = t.startDate || t.dueDate;
-    const taskEnd   = t.dueDate   || t.startDate;
-    // 현재 뷰와 겹치지 않으면 제외
-    if (taskEnd < firstDate || taskStart > lastDate) return;
-    if (t.startDate && t.dueDate && t.startDate !== t.dueDate) {
-      bars.push({ task:t, type:'span', start:t.startDate, end:t.dueDate });
-    } else {
-      const d = t.startDate || t.dueDate;
-      bars.push({ task:t, type:'single', start:d, end:d });
-    }
+    // 마감일 기준 단일 포인트 표시 (마감일 없으면 시작일)
+    const d = t.dueDate || t.startDate;
+    if (d < firstDate || d > lastDate) return;
+    bars.push({ task:t, type:'single', start:d, end:d });
   });
 
   // lane 배정
@@ -380,9 +364,9 @@ function _renderCalDetail(ds) {
   const evs=[];
   tasks.forEach(t=>{
     if(t.status==='archived')return;
-    if(t.startDate===ds && t.dueDate===ds){ evs.push({task:t,type:'due'}); return; }
-    if(t.startDate===ds) evs.push({task:t,type:'start'});
-    if(t.dueDate===ds)   evs.push({task:t,type:'due'});
+    // 마감일 기준 단일 포인트 (마감일 없으면 시작일)
+    const d = t.dueDate || t.startDate;
+    if(d === ds) evs.push({task:t, type: t.dueDate ? 'due' : 'start'});
   });
   const daySchs = schedules.filter(s=>s.date===ds).sort((a,b)=>(a.startTime||'').localeCompare(b.startTime||''));
   const det=document.getElementById('cal-detail');
@@ -392,19 +376,7 @@ function _renderCalDetail(ds) {
   const days=['일','월','화','수','목','금','토'];
   const dateEl = document.getElementById('cal-detail-date');
   if (dateEl) dateEl.textContent=`${y}년 ${m}월 ${d}일 (${days[new Date(ds).getDay()]})`;
-  const taskHtml = evs.map(e=>{
-    const ovd=isOverdue(e.task)&&e.type==='due';
-    return `<div class="cal-detail-item" onclick="openModal('${e.task.id}')">
-      <div class="cal-detail-item-dot" style="background:${accentColor(e.task.priority)}"></div>
-      <div class="cal-detail-item-title">${esc(e.task.title)}</div>
-      <div class="cal-detail-item-meta">
-        ${e.task.category?`<span class="tag">${esc(e.task.category)}</span>`:''}
-        <span class="pri" style="${priStyle(e.task.priority)}">${priLabel(e.task.priority)}</span>
-        ${statusBadge(e.task.status)}
-        <span class="cal-detail-item-type type-label-${e.type}${ovd?' overdue':''}">${e.type==='start'?'▶ 시작':'◎ 마감'}</span>
-      </div>
-    </div>`;
-  }).join('');
+  // 일정 먼저 표시, 업무 클릭 시 업무대장으로 이동
   const schHtml = `<div class="cal-sch-section">
     <div class="cal-sch-hd"><span>일정</span><button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px" onclick="openSchModal('${ds}')">＋ 추가</button></div>
     ${daySchs.length ? daySchs.map(s=>{
@@ -416,8 +388,19 @@ function _renderCalDetail(ds) {
       </div>`;
     }).join('') : '<div style="font-size:11px;color:var(--text3);padding:4px 0">일정 없음</div>'}
   </div>`;
+  const taskHtml = evs.map(e=>{
+    return `<div class="cal-detail-item" onclick="jumpToLedger('${e.task.id}')">
+      <div class="cal-detail-item-dot" style="background:${accentColor(e.task.priority)}"></div>
+      <div class="cal-detail-item-title">${esc(e.task.title)}</div>
+      <div class="cal-detail-item-meta">
+        ${e.task.category?`<span class="tag">${esc(e.task.category)}</span>`:''}
+        <span class="pri" style="${priStyle(e.task.priority)}">${priLabel(e.task.priority)}</span>
+        ${statusBadge(e.task.status)}
+      </div>
+    </div>`;
+  }).join('');
   const listEl = document.getElementById('cal-detail-list');
-  if (listEl) listEl.innerHTML = taskHtml + schHtml;
+  if (listEl) listEl.innerHTML = schHtml + taskHtml;
 }
 
 function openCalDetail(ds, scroll=true){
@@ -612,7 +595,7 @@ function renderWeekly() {
 let annualYear   = new Date().getFullYear();
 let annualOpenId = null;
 let recMemoOpen  = {}; // {id: 'edit'|'preview'}
-let annMemoOpen  = {}; // {id: 'edit'|'preview'}
+let annMemoOpen  = {}; // 미사용 (이전 탭 모드 잔재, 삭제 시 calendar.js 다른 코드 확인 필요)
 
 function recKey() {
   const _n = new Date();
@@ -682,7 +665,6 @@ function renderRecurring() {
 
   function renderRecItem(t, carryLabel) {
     const isDetailOpen = recMemoOpen[t.id] !== undefined;
-    const memoEditing  = recMemoOpen[t.id] === 'edit';
     const curComp = t.completions[mk] || {};
     const isOverdueRec = !curComp.done && isDeadlinePassed;
 
@@ -709,23 +691,16 @@ function renderRecurring() {
           <span style="margin-left:auto">${statusBadge(t.status)}</span>
         </div>
         <div class="rec-month-grid">${monthChecks}</div>
-        <div class="rec-memo-section">
-          <div class="rec-memo-header">
-            <span class="rec-field-label">${nowY}년 ${nowM}월 비고</span>
-            <div class="memo-tabs" style="margin-left:auto">
-              <button class="memo-tab ${memoEditing?'active':''}"  onclick="recMemoTab('${t.id}','edit')">✎ 편집</button>
-              <button class="memo-tab ${!memoEditing?'active':''}" onclick="recMemoTab('${t.id}','preview')">미리보기</button>
-            </div>
+        <div class="memo-section" style="border-top:1px solid var(--border);padding-top:10px">
+          <div class="memo-header">
+            <div class="memo-label">${nowY}년 ${nowM}월 비고</div>
           </div>
-          <textarea class="rec-memo-textarea" id="rec-memo-${t.id}"
-            style="display:${memoEditing?'block':'none'}"
-            placeholder="마크다운으로 입력..."
+          <textarea class="memo-textarea" id="rec-memo-${t.id}"
+            placeholder="메모를 입력하세요..."
+            oninput="autoGrowTextarea(this)"
             onchange="saveRecComp('${t.id}','memo',this.value)"
             onblur="saveRecComp('${t.id}','memo',this.value)"
           >${esc(curComp.memo||'')}</textarea>
-          <div class="memo-preview ${!memoEditing?'visible':''}" id="rec-preview-${t.id}"
-            style="display:${!memoEditing?'block':'none'};min-height:40px;width:100%"
-          >${!memoEditing?parseMarkdown(curComp.memo||''):''}</div>
         </div>
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
           <div style="font-size:11px;color:var(--text2);margin-bottom:6px">${nowY}년 ${nowM}월 세부사항 (이번 달 한정)</div>
@@ -806,21 +781,16 @@ function saveRecMonthDetail(id) {
   saveRecurring();
 }
 function recToggleDetail(id) {
-  if (recMemoOpen[id] !== undefined) { delete recMemoOpen[id]; } else { recMemoOpen[id] = 'preview'; }
+  if (recMemoOpen[id] !== undefined) { delete recMemoOpen[id]; } else { recMemoOpen[id] = true; }
   renderRecurring();
+  if (recMemoOpen[id]) {
+    setTimeout(() => {
+      const ta = document.getElementById('rec-memo-' + id);
+      if (ta) { attachMemoTabKey(ta); autoGrowTextarea(ta); }
+    }, 30);
+  }
 }
 function recToggleMemo(id) { recToggleDetail(id); }
-function recMemoTab(id, mode) {
-  if (mode === 'preview') {
-    const ta = document.getElementById('rec-memo-' + id);
-    const mk = recKey();
-    const t  = recurringTasks.find(x => x.id === id);
-    if (t && ta) { t.completions[mk] = t.completions[mk] || {}; t.completions[mk].memo = ta.value; saveRecurring(); }
-  }
-  recMemoOpen[id] = mode;
-  renderRecurring();
-  if (mode === 'edit') { const ta = document.getElementById('rec-memo-' + id); if (ta) attachMemoTabKey(ta); }
-}
 function toggleRecurringMonth(id, monthKey) {
   const t = recurringTasks.find(x => x.id === id); if (!t) return;
   if (!t.completions[monthKey]) t.completions[monthKey] = { done: false, date: '', memo: '' };
@@ -909,7 +879,6 @@ function renderAnnual() {
           const comp    = t.completions[yk] || {};
           const isDone  = !!comp.done;
           const isOpen  = annualOpenId === t.id;
-          const memoEditing = annMemoOpen[t.id] === 'edit';
           const memoHtml = isOpen ? `
             <div class="annual-detail-panel" onclick="event.stopPropagation()">
               <div class="annual-detail-row" style="align-items:center">
@@ -923,22 +892,17 @@ function renderAnnual() {
                 <button class="btn btn-danger btn-sm btn-icon" onclick="deleteAnnual('${t.id}')">✕</button>
               </div>
               <div class="annual-detail-row" style="flex-direction:column;gap:4px;margin-top:6px">
-                <div class="rec-memo-header" style="display:flex;align-items:center;gap:8px">
-                  <span class="rec-field-label">메모</span>
-                  <div class="memo-tabs">
-                    <button class="memo-tab ${memoEditing?'active':''}"  onclick="annMemoTab('${t.id}','edit')">✎ 편집</button>
-                    <button class="memo-tab ${!memoEditing?'active':''}" onclick="annMemoTab('${t.id}','preview')">미리보기</button>
+                <div class="memo-section" style="border-top:1px solid var(--border);padding-top:10px;width:100%">
+                  <div class="memo-header">
+                    <div class="memo-label">메모</div>
                   </div>
+                  <textarea class="memo-textarea" id="ann-memo-${t.id}"
+                    placeholder="메모를 입력하세요..."
+                    oninput="autoGrowTextarea(this)"
+                    onchange="saveAnnualComp('${t.id}','memo',this.value)"
+                    onblur="saveAnnualComp('${t.id}','memo',this.value)"
+                  >${esc(comp.memo||'')}</textarea>
                 </div>
-                <textarea class="rec-memo-textarea" id="ann-memo-${t.id}"
-                  style="display:${memoEditing?'block':'none'}"
-                  placeholder="마크다운으로 입력..."
-                  onchange="saveAnnualComp('${t.id}','memo',this.value)"
-                  onblur="saveAnnualComp('${t.id}','memo',this.value)"
-                >${esc(comp.memo||'')}</textarea>
-                <div class="memo-preview ${!memoEditing?'visible':''}"
-                  id="ann-preview-${t.id}"
-                  style="${!memoEditing?'display:block':'display:none'}">${!memoEditing?parseMarkdown(comp.memo||''):''}</div>
               </div>
             </div>` : '';
           return `
@@ -962,22 +926,14 @@ function renderAnnual() {
 }
 
 function toggleAnnualDetail(id) {
-  if (annualOpenId === id) { annualOpenId = null; } else {
-    annualOpenId = id;
-    if (annMemoOpen[id] === undefined) annMemoOpen[id] = 'preview';
-  }
+  if (annualOpenId === id) { annualOpenId = null; } else { annualOpenId = id; }
   renderAnnual();
-}
-function annMemoTab(id, mode) {
-  annMemoOpen[id] = mode;
-  if (mode === 'preview') {
-    const ta = document.getElementById('ann-memo-' + id);
-    const yk = annKey();
-    const t  = annualTasks.find(x => x.id === id);
-    if (t && ta) { t.completions[yk] = t.completions[yk] || {}; t.completions[yk].memo = ta.value; saveAnnual(); }
+  if (annualOpenId === id) {
+    setTimeout(() => {
+      const ta = document.getElementById('ann-memo-' + id);
+      if (ta) { attachMemoTabKey(ta); autoGrowTextarea(ta); }
+    }, 30);
   }
-  renderAnnual();
-  if (mode === 'edit') { const ta = document.getElementById('ann-memo-' + id); if (ta) attachMemoTabKey(ta); }
 }
 function toggleAnnual(id) {
   const yk = annKey();

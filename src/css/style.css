@@ -261,10 +261,10 @@ input[type="date"].ep-select{appearance:none;-webkit-appearance:none;}
 .memo-tabs{display:flex;gap:2px;}
 .memo-tab{font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans);transition:all .12s;}
 .memo-tab.active{background:rgba(0,113,227,.12);color:var(--amber);border-color:rgba(0,113,227,.3);}
-.memo-textarea{width:100%;min-height:240px;background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.7;padding:12px 14px;border-radius:4px;outline:none;resize:vertical;transition:border-color .15s;box-sizing:border-box;}
+.memo-textarea{width:100%;min-height:80px;height:auto;background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.7;padding:12px 14px;border-radius:4px;outline:none;resize:none;overflow:hidden;transition:border-color .15s;box-sizing:border-box;}
 .memo-textarea:focus{border-color:var(--amber);}
 .memo-textarea::placeholder{color:var(--text3);}
-.memo-preview{min-height:240px;background:var(--s2);border:1px solid var(--border);border-radius:4px;padding:14px 16px;font-size:13px;line-height:1.8;display:none;}
+.memo-preview{min-height:40px;background:var(--s2);border:1px solid var(--border);border-radius:4px;padding:14px 16px;font-size:13px;line-height:1.8;display:none;}
 .memo-preview.visible{display:block;}
 .memo-preview h1{font-size:16px;font-weight:700;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:4px;}
 .memo-preview h2{font-size:14px;font-weight:600;margin-bottom:6px;color:var(--amber);}
@@ -308,9 +308,9 @@ input[type="date"].ep-select{appearance:none;-webkit-appearance:none;}
 .contact-grid tr:last-child td{border-bottom:none;}
 .contact-grid tr:hover td{background:var(--s2);}
 .contact-grid td.cg-rm{padding:3px 4px;width:20px;text-align:center;}
-/* DASHBOARD 2-COLUMN */
-.dash-cal-row{display:grid;grid-template-columns:1fr 264px;gap:18px;align-items:start;}
-.dash-quick-panel{display:flex;flex-direction:column;gap:12px;}
+/* DASHBOARD LAYOUT */
+.dash-cal-row{display:flex;flex-direction:column;gap:12px;}
+.dash-quick-panel{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px;}
 .quick-section{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
 .quick-section-hd{padding:9px 14px;background:var(--s2);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
 .quick-section-hd .qcount{font-family:var(--mono);font-size:13px;color:var(--text);margin-left:auto;}
@@ -449,7 +449,7 @@ input[type="date"].field-input{appearance:none;-webkit-appearance:none;}
 .rec-meta-chips{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
 .rec-memo-wrap{display:flex;flex-direction:column;gap:4px;flex:1;min-width:220px;}
 .rec-memo-tabs{display:flex;gap:2px;margin-bottom:2px;}
-.rec-memo-textarea{width:100%;min-height:160px;background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.7;padding:10px 12px;border-radius:4px;outline:none;resize:vertical;transition:border-color .15s;box-sizing:border-box;}
+.rec-memo-textarea{width:100%;min-height:80px;height:auto;background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.7;padding:10px 12px;border-radius:4px;outline:none;resize:none;overflow:hidden;transition:border-color .15s;box-sizing:border-box;}
 .rec-memo-textarea:focus{border-color:var(--amber);}
 .rec-memo-textarea::placeholder{color:var(--text3);}
 
@@ -818,8 +818,7 @@ th.inv-col-drag-right{border-right:2px solid var(--amber)!important;}
   .dash-content{padding:16px 18px;}
   .view-header{padding:0 18px;}
   .stat-grid{grid-template-columns:repeat(2,1fr);}
-  .dash-cal-row{grid-template-columns:1fr;}
-  .dash-quick-panel{display:grid;grid-template-columns:repeat(3,1fr);}
+  .dash-quick-panel{grid-template-columns:repeat(2,1fr);}
   .settings-content{padding:16px 18px;}
   .ledger-content{padding:14px 18px;}
 }

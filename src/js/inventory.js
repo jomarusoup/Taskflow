@@ -702,8 +702,9 @@ function invExport() {
 
   invOpenModal('대장 내보내기 (1/2)', bodyHtml, () => {
     const selectedId = document.querySelector('input[name="export-ledger"]:checked')?.value;
-    if (!selectedId) return;
+    if (!selectedId) return false;
     invShowTabSelection(selectedId);
+    return false; // 탭 선택 단계로 교체하므로 자동 닫기 방지
   }, '다음');
 }
 
