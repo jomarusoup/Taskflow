@@ -1,0 +1,650 @@
+{
+  "settings": {
+    "categories": ["백엔드", "프론트엔드", "인프라", "QA", "기획", "문서화"],
+    "tags": ["긴급", "버그", "리팩토링", "성능", "보안", "배포", "코드리뷰", "미팅"],
+    "priorities": [
+      { "key": "critical", "label": "Critical", "color": "var(--orange)" },
+      { "key": "high",     "label": "High",     "color": "var(--red)" },
+      { "key": "medium",   "label": "Medium",   "color": "var(--amber)" },
+      { "key": "low",      "label": "Low",      "color": "var(--text3)" }
+    ],
+    "statuses": [
+      { "key": "todo",       "label": "To Do",       "showInKanban": true,  "showInCalendar": true,  "color": "#5E6C88" },
+      { "key": "inprogress", "label": "In Progress",  "showInKanban": true,  "showInCalendar": true,  "color": "#6AADFF" },
+      { "key": "done",       "label": "Done",         "showInKanban": true,  "showInCalendar": true,  "color": "#3DDC97" },
+      { "key": "archived",   "label": "Archived",     "showInKanban": false, "showInCalendar": false, "color": "#3E4A5E" }
+    ]
+  },
+  "contacts": [
+    {
+      "id": "c1",
+      "name": "김태민",
+      "title": "개발팀장",
+      "company": "(주)테크코어",
+      "categories": ["백엔드", "프론트엔드", "인프라"],
+      "categoryRoles": [
+        { "category": "백엔드",    "role": "main" },
+        { "category": "프론트엔드", "role": "main" },
+        { "category": "인프라",    "role": "main" }
+      ],
+      "type": "main",
+      "officePhone": "02-1234-5001",
+      "mobilePhone": "010-1234-5001",
+      "email": "taem.kim@techcore.io",
+      "memo": "기술 전체 총괄. 아키텍처 리뷰 및 코드 품질 관리 담당."
+    },
+    {
+      "id": "c2",
+      "name": "이수진",
+      "title": "백엔드 개발자",
+      "company": "(주)테크코어",
+      "categories": ["백엔드", "문서화"],
+      "categoryRoles": [
+        { "category": "백엔드",  "role": "main" },
+        { "category": "문서화", "role": "main" }
+      ],
+      "type": "main",
+      "officePhone": "02-1234-5002",
+      "mobilePhone": "010-1234-5002",
+      "email": "sujin.lee@techcore.io",
+      "memo": "Java/Spring 전담. REST API 설계 및 개발, API 문서화 책임자."
+    },
+    {
+      "id": "c3",
+      "name": "박준혁",
+      "title": "백엔드 개발자",
+      "company": "(주)테크코어",
+      "categories": ["백엔드"],
+      "categoryRoles": [
+        { "category": "백엔드", "role": "sub" }
+      ],
+      "type": "sub",
+      "officePhone": "02-1234-5003",
+      "mobilePhone": "010-1234-5003",
+      "email": "junhyeok.park@techcore.io",
+      "memo": "Python/FastAPI 전담. 데이터 파이프라인 및 배치 처리 담당."
+    },
+    {
+      "id": "c4",
+      "name": "최유리",
+      "title": "프론트엔드 개발자",
+      "company": "(주)테크코어",
+      "categories": ["프론트엔드"],
+      "categoryRoles": [
+        { "category": "프론트엔드", "role": "main" }
+      ],
+      "type": "main",
+      "officePhone": "02-1234-5004",
+      "mobilePhone": "010-1234-5004",
+      "email": "yuri.choi@techcore.io",
+      "memo": "React/TypeScript 전담. 컴포넌트 설계 및 상태관리 담당."
+    },
+    {
+      "id": "c5",
+      "name": "정민준",
+      "title": "프론트엔드 개발자",
+      "company": "(주)테크코어",
+      "categories": ["프론트엔드"],
+      "categoryRoles": [
+        { "category": "프론트엔드", "role": "sub" }
+      ],
+      "type": "sub",
+      "officePhone": "02-1234-5005",
+      "mobilePhone": "010-1234-5005",
+      "email": "minjun.jung@techcore.io",
+      "memo": "Vue.js 담당. UI/UX 구현 및 디자인 시스템 관리."
+    },
+    {
+      "id": "c6",
+      "name": "한지연",
+      "title": "DevOps 엔지니어",
+      "company": "(주)테크코어",
+      "categories": ["인프라", "문서화"],
+      "categoryRoles": [
+        { "category": "인프라",  "role": "main" },
+        { "category": "문서화", "role": "sub" }
+      ],
+      "type": "main",
+      "officePhone": "02-1234-5006",
+      "mobilePhone": "010-1234-5006",
+      "email": "jiyeon.han@techcore.io",
+      "memo": "AWS/k8s/CI-CD 전담. 모니터링 및 장애 대응 1차 담당자."
+    },
+    {
+      "id": "c7",
+      "name": "오승훈",
+      "title": "QA 엔지니어",
+      "company": "(주)테크코어",
+      "categories": ["QA"],
+      "categoryRoles": [
+        { "category": "QA", "role": "main" }
+      ],
+      "type": "main",
+      "officePhone": "02-1234-5007",
+      "mobilePhone": "010-1234-5007",
+      "email": "seunghun.oh@techcore.io",
+      "memo": "테스트 자동화(Selenium, k6) 및 QA 프로세스 총괄."
+    },
+    {
+      "id": "c8",
+      "name": "임채원",
+      "title": "PM",
+      "company": "(주)테크코어",
+      "categories": ["기획"],
+      "categoryRoles": [
+        { "category": "기획", "role": "main" }
+      ],
+      "type": "main",
+      "officePhone": "02-1234-5008",
+      "mobilePhone": "010-1234-5008",
+      "email": "chaewon.lim@techcore.io",
+      "memo": "스프린트 계획·조율 및 요구사항 관리 총괄."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "1",
+      "title": "사용자 인증 API 개발 (JWT 기반)",
+      "category": "백엔드",
+      "priority": "high",
+      "status": "inprogress",
+      "tags": ["보안"],
+      "startDate": "2026-04-01",
+      "dueDate": "2026-04-15",
+      "completedAt": null,
+      "assigneeIds": ["c2"],
+      "memo": "## 목표\nJWT access/refresh 토큰 이중화 방식으로 구현.\n\n## 진행 현황\n- [x] 토큰 발급 엔드포인트 구현\n- [x] 토큰 검증 미들웨어 작성\n- [ ] refresh 토큰 갱신 로직 구현\n- [ ] 단위 테스트 작성",
+      "linkedTaskIds": ["3"]
+    },
+    {
+      "id": "2",
+      "title": "DB 쿼리 최적화 — 목록 API 응답 속도 개선",
+      "category": "백엔드",
+      "priority": "medium",
+      "status": "inprogress",
+      "tags": ["성능"],
+      "startDate": "2026-04-03",
+      "dueDate": "2026-04-14",
+      "completedAt": null,
+      "assigneeIds": ["c3"],
+      "memo": "현재 목록 API 평균 응답 550ms → 목표 150ms 이내.\n\nN+1 쿼리 제거, 인덱스 추가, 페이지네이션 개선 포함.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "3",
+      "title": "[긴급] JWT 토큰 만료 후 갱신 실패 버그",
+      "category": "백엔드",
+      "priority": "critical",
+      "status": "todo",
+      "tags": ["긴급", "버그"],
+      "startDate": "2026-04-07",
+      "dueDate": "2026-04-08",
+      "completedAt": null,
+      "assigneeIds": ["c1", "c2"],
+      "memo": "## 재현 경로\n1. 로그인 후 access 토큰 만료 대기\n2. refresh 요청 시 401 반환\n\n## 예상 원인\nrefresh 토큰 검증 로직에서 `iat` 클레임 비교 오류.",
+      "linkedTaskIds": ["1"]
+    },
+    {
+      "id": "4",
+      "title": "REST API 단위 테스트 커버리지 80% 달성",
+      "category": "백엔드",
+      "priority": "medium",
+      "status": "todo",
+      "tags": ["코드리뷰"],
+      "startDate": "2026-04-10",
+      "dueDate": "2026-04-25",
+      "completedAt": null,
+      "assigneeIds": ["c3"],
+      "memo": "현재 커버리지 약 43%. JUnit5 + Mockito 기반으로 서비스 레이어 테스트 집중 작성.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "5",
+      "title": "캐싱 레이어 구현 (Redis)",
+      "category": "백엔드",
+      "priority": "medium",
+      "status": "todo",
+      "tags": ["성능"],
+      "startDate": "2026-04-15",
+      "dueDate": "2026-04-30",
+      "completedAt": null,
+      "assigneeIds": ["c3"],
+      "memo": "자주 조회되는 공통 코드 및 사용자 프로필 데이터 캐싱. TTL 5분 기본값.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "6",
+      "title": "이메일 발송 서비스 연동 (SMTP → SES 전환)",
+      "category": "백엔드",
+      "priority": "low",
+      "status": "archived",
+      "tags": [],
+      "startDate": "2026-03-01",
+      "dueDate": "2026-03-15",
+      "completedAt": "2026-03-14",
+      "assigneeIds": ["c3"],
+      "memo": "AWS SES로 전환 완료. 발송 실패 시 재시도 큐(SQS) 연결 포함.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "7",
+      "title": "로그인 / 회원가입 페이지 UI 구현",
+      "category": "프론트엔드",
+      "priority": "high",
+      "status": "inprogress",
+      "tags": ["보안"],
+      "startDate": "2026-04-01",
+      "dueDate": "2026-04-12",
+      "completedAt": null,
+      "assigneeIds": ["c4"],
+      "memo": "피그마 디자인 시안 기준 구현 중.\n\n- [x] 로그인 폼 컴포넌트\n- [x] 유효성 검사 (이메일/비밀번호)\n- [ ] 소셜 로그인 버튼 (Google, Kakao)\n- [ ] 에러 메시지 표시 UX",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "8",
+      "title": "대시보드 차트 컴포넌트 개선",
+      "category": "프론트엔드",
+      "priority": "medium",
+      "status": "todo",
+      "tags": ["리팩토링"],
+      "startDate": "2026-04-14",
+      "dueDate": "2026-04-24",
+      "completedAt": null,
+      "assigneeIds": ["c5"],
+      "memo": "Recharts → Victory 마이그레이션. 다크모드 지원 및 반응형 처리 포함.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "9",
+      "title": "반응형 레이아웃 전면 적용",
+      "category": "프론트엔드",
+      "priority": "low",
+      "status": "done",
+      "tags": [],
+      "startDate": "2026-03-20",
+      "dueDate": "2026-04-03",
+      "completedAt": "2026-04-03",
+      "assigneeIds": ["c4"],
+      "memo": "모바일(375px) / 태블릿(768px) / PC(1280px) 3단계 브레이크포인트 기준으로 완료.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "10",
+      "title": "접근성(a11y) 개선 — WCAG 2.1 AA 기준",
+      "category": "프론트엔드",
+      "priority": "low",
+      "status": "todo",
+      "tags": [],
+      "startDate": "2026-04-20",
+      "dueDate": "2026-05-05",
+      "completedAt": null,
+      "assigneeIds": ["c5"],
+      "memo": "키보드 네비게이션, aria-label, 색상 대비 4.5:1 이상 보장.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "11",
+      "title": "에러 핸들링 표준화 (공통 Error Boundary)",
+      "category": "프론트엔드",
+      "priority": "medium",
+      "status": "todo",
+      "tags": ["리팩토링"],
+      "startDate": "2026-04-11",
+      "dueDate": "2026-04-20",
+      "completedAt": null,
+      "assigneeIds": ["c4"],
+      "memo": "전역 ErrorBoundary 도입 및 Sentry 연동. API 오류 → 토스트 메시지 표준 포맷 정의.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "12",
+      "title": "GitHub Actions CI/CD 파이프라인 구축",
+      "category": "인프라",
+      "priority": "high",
+      "status": "inprogress",
+      "tags": ["배포"],
+      "startDate": "2026-04-01",
+      "dueDate": "2026-04-18",
+      "completedAt": null,
+      "assigneeIds": ["c6"],
+      "memo": "## 구성 계획\n- PR: lint + unit test 자동 실행\n- main merge: 스테이징 자동 배포\n- 태그: 프로덕션 배포 (승인 게이트 포함)\n\n현재 스테이징 배포 단계까지 구현 완료.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "13",
+      "title": "AWS ECS 프로덕션 클러스터 설정",
+      "category": "인프라",
+      "priority": "medium",
+      "status": "todo",
+      "tags": ["배포"],
+      "startDate": "2026-04-20",
+      "dueDate": "2026-04-30",
+      "completedAt": null,
+      "assigneeIds": ["c6"],
+      "memo": "Fargate 기반. Auto Scaling 정책: CPU 70% 초과 시 scale-out, 2분 평가 기간.",
+      "linkedTaskIds": ["12"]
+    },
+    {
+      "id": "14",
+      "title": "CloudWatch 알림 및 슬랙 연동",
+      "category": "인프라",
+      "priority": "medium",
+      "status": "done",
+      "tags": [],
+      "startDate": "2026-03-25",
+      "dueDate": "2026-04-01",
+      "completedAt": "2026-04-01",
+      "assigneeIds": ["c6"],
+      "memo": "CPU 85% / 메모리 90% / 5xx 오류율 1% 초과 시 슬랙 #alert 채널 알림 설정 완료.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "15",
+      "title": "도커 이미지 경량화 (멀티 스테이지 빌드)",
+      "category": "인프라",
+      "priority": "low",
+      "status": "todo",
+      "tags": ["성능"],
+      "startDate": "2026-04-22",
+      "dueDate": "2026-05-06",
+      "completedAt": null,
+      "assigneeIds": ["c6"],
+      "memo": "현재 백엔드 이미지 1.2GB → 목표 200MB 이내. JRE only + alpine 기반.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "16",
+      "title": "데이터베이스 자동 백업 구성 (RDS Snapshot)",
+      "category": "인프라",
+      "priority": "high",
+      "status": "todo",
+      "tags": ["보안"],
+      "startDate": "2026-04-09",
+      "dueDate": "2026-04-16",
+      "completedAt": null,
+      "assigneeIds": ["c1", "c6"],
+      "memo": "일 1회 자동 스냅샷, 보존 기간 30일. 복구 절차 문서화 포함.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "17",
+      "title": "API 통합 테스트 작성 (Postman Collection)",
+      "category": "QA",
+      "priority": "high",
+      "status": "inprogress",
+      "tags": [],
+      "startDate": "2026-04-05",
+      "dueDate": "2026-04-18",
+      "completedAt": null,
+      "assigneeIds": ["c7"],
+      "memo": "인증, 사용자, 주문 도메인 엔드포인트 전체 커버. Newman으로 CI 파이프라인 연동 예정.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "18",
+      "title": "부하 테스트 시나리오 작성 (k6)",
+      "category": "QA",
+      "priority": "medium",
+      "status": "todo",
+      "tags": ["성능"],
+      "startDate": "2026-04-20",
+      "dueDate": "2026-04-30",
+      "completedAt": null,
+      "assigneeIds": ["c7"],
+      "memo": "목표: 동시 사용자 500명, TPS 200, p99 응답 300ms 이내. 스파이크 테스트 포함.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "19",
+      "title": "크로스 브라우저 호환성 테스트",
+      "category": "QA",
+      "priority": "medium",
+      "status": "done",
+      "tags": [],
+      "startDate": "2026-03-28",
+      "dueDate": "2026-04-05",
+      "completedAt": "2026-04-05",
+      "assigneeIds": ["c7"],
+      "memo": "Chrome 최신 / Firefox / Safari / Edge 검증 완료. IE11 지원 제외 확정.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "20",
+      "title": "회귀 테스트 자동화 (Playwright)",
+      "category": "QA",
+      "priority": "medium",
+      "status": "todo",
+      "tags": [],
+      "startDate": "2026-04-21",
+      "dueDate": "2026-05-09",
+      "completedAt": null,
+      "assigneeIds": ["c7"],
+      "memo": "주요 사용자 플로우 20개 시나리오 자동화 목표. 배포 후 smoke test로 활용.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "21",
+      "title": "2분기 스프린트 계획 수립",
+      "category": "기획",
+      "priority": "high",
+      "status": "done",
+      "tags": ["미팅"],
+      "startDate": "2026-03-31",
+      "dueDate": "2026-04-02",
+      "completedAt": "2026-04-02",
+      "assigneeIds": ["c8"],
+      "memo": "4~6월 스프린트 15개 구성 완료. 팀 역량 기준 백로그 우선순위 정렬 확정.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "22",
+      "title": "신규 기능 명세서 작성 (알림 시스템)",
+      "category": "기획",
+      "priority": "high",
+      "status": "inprogress",
+      "tags": [],
+      "startDate": "2026-04-07",
+      "dueDate": "2026-04-17",
+      "completedAt": null,
+      "assigneeIds": ["c8"],
+      "memo": "실시간 알림(WebSocket) 및 이메일 알림 통합 명세. 디자인팀 리뷰 후 개발 착수.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "23",
+      "title": "사용자 스토리 업데이트 (마이페이지 v2)",
+      "category": "기획",
+      "priority": "medium",
+      "status": "todo",
+      "tags": [],
+      "startDate": "2026-04-16",
+      "dueDate": "2026-04-23",
+      "completedAt": null,
+      "assigneeIds": ["c8"],
+      "memo": "기존 마이페이지 개선 요구사항 취합 완료. 사용자 인터뷰 3건 결과 반영 예정.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "24",
+      "title": "REST API 개발자 가이드 작성",
+      "category": "문서화",
+      "priority": "medium",
+      "status": "inprogress",
+      "tags": [],
+      "startDate": "2026-04-05",
+      "dueDate": "2026-04-20",
+      "completedAt": null,
+      "assigneeIds": ["c2"],
+      "memo": "Swagger UI 자동 생성 + 수동 예시 추가. 인증 API 섹션 완료, 나머지 진행 중.",
+      "linkedTaskIds": []
+    },
+    {
+      "id": "25",
+      "title": "배포 절차 가이드 업데이트",
+      "category": "문서화",
+      "priority": "low",
+      "status": "todo",
+      "tags": ["배포"],
+      "startDate": "2026-04-21",
+      "dueDate": "2026-04-28",
+      "completedAt": null,
+      "assigneeIds": ["c6"],
+      "memo": "기존 수동 배포 가이드를 CI/CD 파이프라인 구축 이후 버전으로 전면 갱신.",
+      "linkedTaskIds": []
+    }
+  ],
+  "recurringTasks": [
+    {
+      "id": "101",
+      "title": "스프린트 회고 미팅",
+      "category": "기획",
+      "priority": "medium",
+      "status": "todo",
+      "tags": ["미팅"],
+      "memo": "매월 마지막 주 금요일 오후 3시. Keep / Problem / Try 형식으로 진행.\n\n회고 결과는 Confluence 팀 페이지에 기록.",
+      "completions": {
+        "2026-01": { "done": true,  "doneAt": "2026-01-31", "memo": "배포 프로세스 개선 아이템 3건 도출.", "startDate": null, "dueDate": "2026-01-31", "category": "기획", "assigneeIds": ["c8"] },
+        "2026-02": { "done": true,  "doneAt": "2026-02-28", "memo": "테스트 커버리지 목표 40→80% 상향 합의.", "startDate": null, "dueDate": "2026-02-28", "category": "기획", "assigneeIds": ["c8"] },
+        "2026-03": { "done": true,  "doneAt": "2026-03-28", "memo": "CI/CD 자동화 최우선 과제로 확정.", "startDate": null, "dueDate": "2026-03-28", "category": "기획", "assigneeIds": ["c8"] },
+        "2026-04": { "done": false, "doneAt": null, "memo": "", "startDate": null, "dueDate": "2026-04-30", "category": "기획", "assigneeIds": ["c8"] }
+      }
+    },
+    {
+      "id": "102",
+      "title": "서버 보안 패치 적용",
+      "category": "인프라",
+      "priority": "high",
+      "status": "todo",
+      "tags": ["보안"],
+      "memo": "OS 및 미들웨어 보안 패치 매월 첫째 주 수요일 적용.\n\n패치 전 스테이징에서 1일 검증 필수.",
+      "completions": {
+        "2026-01": { "done": true,  "doneAt": "2026-01-08", "memo": "OpenSSL 취약점 패치 적용 완료.", "startDate": "2026-01-07", "dueDate": "2026-01-08", "category": "인프라", "assigneeIds": ["c6"] },
+        "2026-02": { "done": true,  "doneAt": "2026-02-05", "memo": "Ubuntu 22.04 LTS 커널 업데이트.", "startDate": "2026-02-04", "dueDate": "2026-02-05", "category": "인프라", "assigneeIds": ["c6"] },
+        "2026-03": { "done": true,  "doneAt": "2026-03-05", "memo": "JDK 21 패치 + Nginx 1.25.4 업데이트.", "startDate": "2026-03-04", "dueDate": "2026-03-05", "category": "인프라", "assigneeIds": ["c6"] },
+        "2026-04": { "done": false, "doneAt": null, "memo": "", "startDate": "2026-04-07", "dueDate": "2026-04-09", "category": "인프라", "assigneeIds": ["c6"] }
+      }
+    },
+    {
+      "id": "103",
+      "title": "서버 리소스 사용량 월간 점검",
+      "category": "인프라",
+      "priority": "medium",
+      "status": "todo",
+      "tags": ["성능"],
+      "memo": "매월 말일 CloudWatch 대시보드 기준으로 CPU/메모리/디스크/네트워크 추이 분석.\n\n이상 징후 발견 시 즉시 팀장에게 보고.",
+      "completions": {
+        "2026-01": { "done": true,  "doneAt": "2026-01-31", "memo": "DB 디스크 사용률 72% → 용량 증설 검토 시작.", "startDate": null, "dueDate": "2026-01-31", "category": "인프라", "assigneeIds": ["c6"] },
+        "2026-02": { "done": true,  "doneAt": "2026-02-28", "memo": "RDS 스토리지 100GB→200GB 증설 완료.", "startDate": null, "dueDate": "2026-02-28", "category": "인프라", "assigneeIds": ["c6"] },
+        "2026-03": { "done": true,  "doneAt": "2026-03-31", "memo": "전반적으로 안정적. API 서버 평균 CPU 35%.", "startDate": null, "dueDate": "2026-03-31", "category": "인프라", "assigneeIds": ["c6"] },
+        "2026-04": { "done": false, "doneAt": null, "memo": "", "startDate": null, "dueDate": "2026-04-30", "category": "인프라", "assigneeIds": ["c6"] }
+      }
+    },
+    {
+      "id": "104",
+      "title": "코드 품질 지표 리뷰 (SonarQube)",
+      "category": "백엔드",
+      "priority": "medium",
+      "status": "todo",
+      "tags": ["코드리뷰"],
+      "memo": "매월 2일 SonarQube 리포트 확인. 버그/취약점 0건, 코드 스멜 감소 추세 유지 목표.",
+      "completions": {
+        "2026-01": { "done": true,  "doneAt": "2026-01-02", "memo": "기술 부채 비율 8.3%→7.1%로 개선.", "startDate": null, "dueDate": "2026-01-02", "category": "백엔드", "assigneeIds": ["c1"] },
+        "2026-02": { "done": true,  "doneAt": "2026-02-03", "memo": "Critical 취약점 2건 즉시 수정 완료.", "startDate": null, "dueDate": "2026-02-03", "category": "백엔드", "assigneeIds": ["c1"] },
+        "2026-03": { "done": true,  "doneAt": "2026-03-04", "memo": "테스트 커버리지 43% 달성. 지속 개선 필요.", "startDate": null, "dueDate": "2026-03-04", "category": "백엔드", "assigneeIds": ["c1"] },
+        "2026-04": { "done": false, "doneAt": null, "memo": "", "startDate": null, "dueDate": "2026-04-09", "category": "백엔드", "assigneeIds": ["c1"] }
+      }
+    },
+    {
+      "id": "105",
+      "title": "의존성 라이브러리 업데이트",
+      "category": "백엔드",
+      "priority": "low",
+      "status": "todo",
+      "tags": ["보안"],
+      "memo": "Dependabot 알림 기준 매월 15일 일괄 검토. Major 버전 업은 별도 태스크로 분리.",
+      "completions": {
+        "2026-01": { "done": true,  "doneAt": "2026-01-15", "memo": "Spring Boot 3.2.1→3.2.2, 8개 패키지 업데이트.", "startDate": null, "dueDate": "2026-01-15", "category": "백엔드", "assigneeIds": ["c3"] },
+        "2026-02": { "done": true,  "doneAt": "2026-02-14", "memo": "보안 취약점 포함된 jackson-databind 업데이트 완료.", "startDate": null, "dueDate": "2026-02-15", "category": "백엔드", "assigneeIds": ["c3"] },
+        "2026-03": { "done": true,  "doneAt": "2026-03-15", "memo": "12개 패키지 업데이트. 하위호환 이슈 없음.", "startDate": null, "dueDate": "2026-03-15", "category": "백엔드", "assigneeIds": ["c3"] },
+        "2026-04": { "done": false, "doneAt": null, "memo": "", "startDate": null, "dueDate": "2026-04-15", "category": "백엔드", "assigneeIds": ["c3"] }
+      }
+    }
+  ],
+  "annualTasks": [
+    {
+      "id": "201",
+      "title": "2026 연간 기술 로드맵 수립",
+      "month": 1,
+      "category": "기획",
+      "priority": "high",
+      "status": "done",
+      "tags": ["미팅"],
+      "memo": "전 팀원 참여. 분기별 마일스톤 확정 후 Confluence 공유.\n\n2026년 핵심 목표: MSA 전환 준비, 테스트 자동화 강화, 관측성(Observability) 도입.",
+      "startDate": "2026-01-02",
+      "dueDate": "2026-01-10",
+      "completions": {
+        "2026": { "done": true, "date": "2026-01-09", "memo": "로드맵 v1.0 확정. 분기별 OKR 연동 완료." }
+      }
+    },
+    {
+      "id": "202",
+      "title": "Q1 성과 리뷰 및 Q2 목표 조정",
+      "month": 3,
+      "category": "기획",
+      "priority": "high",
+      "status": "done",
+      "tags": ["미팅"],
+      "memo": "1분기 KPI 달성률 점검. 미달성 항목 원인 분석 후 Q2 목표에 반영.",
+      "startDate": "2026-03-25",
+      "dueDate": "2026-03-31",
+      "completions": {
+        "2026": { "done": true, "date": "2026-03-31", "memo": "배포 빈도 목표 60% 달성. CI/CD 구축이 Q2 최우선 과제로 상향." }
+      }
+    },
+    {
+      "id": "203",
+      "title": "상반기 보안 감사 및 취약점 점검",
+      "month": 6,
+      "category": "인프라",
+      "priority": "high",
+      "status": "todo",
+      "tags": ["보안"],
+      "memo": "외부 보안 전문 업체 의뢰 예정 (예산 승인 완료).\n\n점검 범위: 네트워크, 애플리케이션, 데이터 접근 권한.",
+      "startDate": "2026-06-01",
+      "dueDate": "2026-06-20",
+      "completions": {
+        "2026": { "done": false, "date": "", "memo": "" }
+      }
+    },
+    {
+      "id": "204",
+      "title": "Q3 성과 리뷰 및 Q4 계획 수립",
+      "month": 9,
+      "category": "기획",
+      "priority": "medium",
+      "status": "todo",
+      "tags": ["미팅"],
+      "memo": "3분기 KPI 달성률 점검 및 연말 목표 최종 조율.",
+      "startDate": "2026-09-24",
+      "dueDate": "2026-09-30",
+      "completions": {
+        "2026": { "done": false, "date": "", "memo": "" }
+      }
+    },
+    {
+      "id": "205",
+      "title": "연말 기술 부채 정리 스프린트",
+      "month": 12,
+      "category": "백엔드",
+      "priority": "medium",
+      "status": "todo",
+      "tags": ["리팩토링"],
+      "memo": "연말 2주 전용 스프린트. 신규 기능 개발 중단 후 기술 부채 해소에 집중.\n\n대상: 레거시 API 정리, 미사용 코드 제거, 문서 최신화.",
+      "startDate": "2026-12-14",
+      "dueDate": "2026-12-25",
+      "completions": {
+        "2026": { "done": false, "date": "", "memo": "" }
+      }
+    }
+  ]
+}

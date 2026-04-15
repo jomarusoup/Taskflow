@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: blob:; connect-src 'none';">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TASKFLOW</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="logo">
+    <div class="logo-mark">TASKFLOW</div>
+    <div class="logo-sub">업무 관리 시스템</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">VIEWS</div>
+    <button class="nav-item active" onclick="switchView('dashboard')">
+      <span class="nav-icon">📅</span> 대시보드
+      <span class="nav-badge" id="badge-dashboard">0</span>
+    </button>
+    <button class="nav-item" onclick="switchView('kanban')">
+      <span class="nav-icon">📊</span> 칸반 보드
+      <span class="nav-badge" id="badge-kanban">0</span>
+    </button>
+    <button class="nav-item" onclick="switchView('ledger')">
+      <span class="nav-icon">📋</span> 업무 대장
+      <span class="nav-badge" id="badge-ledger">0</span>
+    </button>
+    <button class="nav-item" onclick="switchView('inventory')">
+      <span class="nav-icon">📦</span> 인벤토리
+    </button>
+    <button class="nav-item" onclick="switchView('contacts')">
+      <span class="nav-icon">👥</span> 연락처
+      <span class="nav-badge" id="badge-contacts">0</span>
+    </button>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">MANAGE</div>
+    <button class="nav-item backup-btn" id="backup-nav-btn" onclick="switchView('backup')">
+      <span class="nav-icon">💾</span>
+      <span>백업</span>
+      <span class="backup-badge" id="backup-badge"></span>
+    </button>
+    <button class="nav-item" onclick="switchView('settings')"><span class="nav-icon">⚙️</span> 설정</button>
+  </div>
+  <div class="sidebar-bottom">
+    <button class="theme-toggle" onclick="toggleTheme()">
+      <span id="theme-icon">☾</span>
+      <span id="theme-label">다크 모드</span>
+    </button>
+    <div>
+      <div class="clock" id="clock">00:00:00</div>
+      <div class="clock-date" id="clock-date"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- CALENDAR -->
+  <div class="view active" id="view-dashboard">
+    <div class="view-header">
+      <div>
+        <div class="view-title">캘린더</div>
+        <div class="view-subtitle" id="dash-date-label">업무 일정 현황</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="openModal()">＋ 업무 추가</button>
+      </div>
+    </div>
+    <div class="dash-content">
+      <div class="stat-grid">
+        <div class="stat-card amber"><div class="stat-label">전체 활성 업무</div><div class="stat-val" id="stat-total">0</div><div class="stat-sub">Todo + In Progress</div></div>
+        <div class="stat-card blue"><div class="stat-label">진행 중</div><div class="stat-val" id="stat-inprog">0</div><div class="stat-sub">In Progress</div></div>
+        <div class="stat-card green"><div class="stat-label">오늘 완료</div><div class="stat-val" id="stat-done-today">0</div><div class="stat-sub">Today completed</div></div>
+        <div class="stat-card red"><div class="stat-label">기한 초과</div><div class="stat-val" id="stat-overdue">0</div><div class="stat-sub">Overdue tasks</div></div>
+      </div>
+
+      <!-- 정기/연간 요약 카드 -->
+      <div class="stat-grid" style="grid-template-columns:1fr 1fr;">
+        <div class="stat-card" id="rec-summary-card">
+          <div class="stat-label" id="rec-summary-label">월간 업무 — <span id="rec-summary-month"></span></div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin:6px 0 4px;">
+            <span style="font-family:var(--mono);font-size:26px;font-weight:600;color:var(--green)" id="rec-sum-done">0</span>
+            <span style="color:var(--text3);font-size:13px">완료</span>
+            <span style="font-family:var(--mono);font-size:26px;font-weight:600;color:var(--red)" id="rec-sum-undone">0</span>
+            <span style="color:var(--text3);font-size:13px">미완료</span>
+            <span style="font-family:var(--mono);font-size:26px;font-weight:600;color:var(--text2)" id="rec-sum-total">0</span>
+            <span style="color:var(--text3);font-size:13px">전체</span>
+          </div>
+          <div class="stat-sub" id="rec-sum-bar-wrap" style="margin-top:6px">
+            <div style="height:4px;background:var(--s3);border-radius:2px;overflow:hidden">
+              <div id="rec-sum-bar" style="height:100%;background:var(--green);border-radius:2px;transition:width .4s;width:0%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card" id="ann-summary-card">
+          <div class="stat-label">연간 업무 — <span id="ann-summary-year"></span></div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin:6px 0 4px;">
+            <span style="font-family:var(--mono);font-size:26px;font-weight:600;color:var(--green)" id="ann-sum-done">0</span>
+            <span style="color:var(--text3);font-size:13px">완료</span>
+            <span style="font-family:var(--mono);font-size:26px;font-weight:600;color:var(--blue)" id="ann-sum-prog">0</span>
+            <span style="color:var(--text3);font-size:13px">진행중</span>
+            <span style="font-family:var(--mono);font-size:26px;font-weight:600;color:var(--text2)" id="ann-sum-plan">0</span>
+            <span style="color:var(--text3);font-size:13px">예정</span>
+            <span style="font-family:var(--mono);font-size:22px;font-weight:600;color:var(--red)" id="ann-sum-over">0</span>
+            <span style="color:var(--text3);font-size:13px">미완료</span>
+          </div>
+          <div style="margin-top:6px">
+            <div style="height:4px;background:var(--s3);border-radius:2px;overflow:hidden;display:flex;gap:1px">
+              <div id="ann-sum-bar-done" style="height:100%;background:var(--green);transition:width .4s;width:0%"></div>
+              <div id="ann-sum-bar-prog" style="height:100%;background:var(--blue);transition:width .4s;width:0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dash-cal-row">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="cal-wrap">
+            <div class="cal-header">
+              <button class="cal-nav-btn" onclick="calMove(-1)">‹</button>
+              <div class="cal-month-label" id="cal-month-label"></div>
+              <button class="cal-nav-btn" onclick="calMove(1)">›</button>
+              <button class="cal-today-btn" onclick="calGoToday()">오늘</button>
+            </div>
+            <div class="cal-dow-row">
+              <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+            </div>
+            <div class="cal-grid-wrap">
+              <div class="cal-grid" id="cal-grid"></div>
+              <div class="cal-events-layer" id="cal-events-layer"></div>
+            </div>
+          </div>
+          <div class="cal-detail" id="cal-detail" style="display:none">
+            <div class="cal-detail-header">
+              <span class="cal-detail-date" id="cal-detail-date"></span>
+              <button class="cal-detail-close" onclick="closeCalDetail()">✕</button>
+            </div>
+            <div class="cal-detail-list" id="cal-detail-list"></div>
+          </div>
+        </div>
+        <!-- 퀵 현황 패널 -->
+        <div class="dash-quick-panel" id="dash-quick-panel">
+          <div class="quick-section">
+            <div class="quick-section-hd">기한 초과<span class="qcount" id="qcount-overdue">0</span></div>
+            <div id="qlist-overdue"></div>
+          </div>
+          <div class="quick-section">
+            <div class="quick-section-hd">오늘 마감<span class="qcount" id="qcount-today">0</span></div>
+            <div id="qlist-today"></div>
+          </div>
+          <div class="quick-section">
+            <div class="quick-section-hd">오늘 완료<span class="qcount" id="qcount-done">0</span></div>
+            <div id="qlist-done"></div>
+          </div>
+          <div class="quick-section">
+            <div class="quick-section-hd">오늘 일정<span class="qcount" id="qcount-schedule">0</span></div>
+            <div id="qlist-schedule"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 주간 업무 ── -->
+      <div class="rec-section" id="weekly-section">
+        <div class="rec-header" onclick="toggleSection('weekly')" style="cursor:pointer;user-select:none">
+          <div class="rec-header-left">
+            <span class="rec-section-title">📋 주간 업무</span>
+            <span class="rec-section-sub" id="weekly-label"></span>
+          </div>
+          <div class="rec-header-right">
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();exportWeeklyCSV()" title="주간 업무 Excel(CSV) 내보내기">↓ Excel</button>
+            <span class="section-chevron" id="chevron-weekly">▼</span>
+          </div>
+        </div>
+        <div id="weekly-list" class="section-body"></div>
+      </div>
+
+      <!-- ── 월간 업무 ── -->
+      <div class="rec-section">
+        <div class="rec-header" onclick="toggleSection('rec')" style="cursor:pointer;user-select:none">
+          <div class="rec-header-left">
+            <span class="rec-section-title">🔄 월간 업무</span>
+            <span class="rec-section-sub" id="rec-month-label"></span>
+            <span id="rec-history-badges" style="display:flex;gap:4px;align-items:center"></span>
+          </div>
+          <div class="rec-header-right">
+            <span class="rec-progress" id="rec-progress" onclick="event.stopPropagation()"></span>
+            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openRecModal()">＋ 추가</button>
+            <span class="section-chevron" id="chevron-rec">▼</span>
+          </div>
+        </div>
+        <div id="rec-list" class="section-body"></div>
+      </div>
+
+      <!-- ── 연간 업무 ── -->
+      <div class="rec-section">
+        <div class="rec-header" onclick="toggleSection('annual')" style="cursor:pointer;user-select:none">
+          <div class="rec-header-left">
+            <span class="rec-section-title">📅 연간 업무</span>
+            <span class="rec-section-sub" id="annual-year-label"></span>
+          </div>
+          <div class="rec-header-right">
+            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openAnnualModal()">＋ 추가</button>
+            <span class="section-chevron" id="chevron-annual">▼</span>
+          </div>
+        </div>
+        <div id="annual-grid" class="section-body"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- KANBAN -->
+  <div class="view" id="view-kanban">
+    <div class="view-header">
+      <div><div class="view-title">칸반 보드</div><div class="view-subtitle">드래그로 상태 변경</div></div>
+      <div class="header-actions">
+        <select class="filter-select" id="kanban-cat-filter" onchange="renderKanban()"><option value="">전체 카테고리</option></select>
+        <button class="btn btn-primary" onclick="openModal()">＋ 업무 추가</button>
+      </div>
+    </div>
+    <div class="kanban-content" id="kanban-board"></div>
+  </div>
+
+  <!-- LEDGER -->
+  <div class="view" id="view-ledger">
+    <div class="view-header">
+      <div>
+        <div class="view-title">업무 대장</div>
+        <div class="view-subtitle">제목 옆 ▶ → 인라인 상세 편집</div>
+      </div>
+      <div class="header-actions">
+        <div class="view-toggle-wrap">
+          <button class="view-toggle-btn active" id="ledger-toggle-list" onclick="setLedgerMode('list')" title="리스트">≡ 리스트</button>
+          <button class="view-toggle-btn" id="ledger-toggle-group" onclick="setLedgerMode('group')" title="그룹">📁 그룹</button>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="exportCSV()" title="현재 필터 기준으로 CSV 내보내기">↓ CSV</button>
+        <button class="btn btn-primary" onclick="openModal()">＋ 업무 추가</button>
+      </div>
+    </div>
+    <div class="ledger-content">
+      <div class="filter-bar">
+        <input class="filter-input wide" id="ledger-search" placeholder="제목 · 메모 검색..." oninput="renderLedger()">
+        <!-- 상태 멀티셀렉트 -->
+        <div class="msel-wrap" id="msel-status-wrap">
+          <button class="msel-btn" id="msel-status-btn" onclick="toggleMsel('status')">
+            <span id="msel-status-label">전체 상태</span><span class="msel-arrow">▾</span>
+          </button>
+          <div class="msel-dropdown" id="msel-status-dd"></div>
+        </div>
+        <!-- 우선순위 멀티셀렉트 -->
+        <div class="msel-wrap" id="msel-priority-wrap">
+          <button class="msel-btn" id="msel-priority-btn" onclick="toggleMsel('priority')">
+            <span id="msel-priority-label">전체 우선순위</span><span class="msel-arrow">▾</span>
+          </button>
+          <div class="msel-dropdown" id="msel-priority-dd"></div>
+        </div>
+        <!-- 카테고리 멀티셀렉트 -->
+        <div class="msel-wrap" id="msel-cat-wrap">
+          <button class="msel-btn" id="msel-cat-btn" onclick="toggleMsel('cat')">
+            <span id="msel-cat-label">전체 카테고리</span><span class="msel-arrow">▾</span>
+          </button>
+          <div class="msel-dropdown" id="msel-cat-dd"></div>
+        </div>
+        <input class="filter-input" id="ledger-tag" placeholder="태그..." oninput="renderLedger()" style="width:100px">
+        <button class="btn btn-ghost btn-sm" onclick="clearFilters()">초기화</button>
+      </div>
+      <div class="table-wrap" id="ledger-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>제목</th>
+              <th class="th-sort" onclick="setLedgerSort('startDate')" id="th-startDate">시작일 <span class="sort-icon" id="si-startDate">⇅</span></th>
+              <th class="th-sort" onclick="setLedgerSort('dueDate')"   id="th-dueDate">마감일 <span class="sort-icon" id="si-dueDate">⇅</span></th>
+              <th class="th-sort" onclick="setLedgerSort('category')"  id="th-category">카테고리 <span class="sort-icon" id="si-category">⇅</span></th>
+              <th class="th-sort" onclick="setLedgerSort('priority')"  id="th-priority">우선순위 <span class="sort-icon" id="si-priority">⇅</span></th>
+              <th class="th-sort" onclick="setLedgerSort('status')"    id="th-status">상태 <span class="sort-icon" id="si-status">⇅</span></th>
+              <th>담당자</th><th>태그</th><th>완료일</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="ledger-tbody"></tbody>
+        </table>
+      </div>
+      <div id="ledger-group-wrap"></div>
+    </div>
+  </div>
+
+
+  <!-- INVENTORY -->
+  <div class="view" id="view-inventory" style="overflow:hidden">
+    <div class="inv-layout">
+      <div class="inv-sb" id="inv-sidebar">
+        <div class="inv-sb-hd"><span class="inv-sb-title">대장 목록</span></div>
+        <div class="inv-sb-list" id="inv-sb-list"></div>
+        <div class="inv-sb-ft">
+          <button class="inv-sb-btn" id="inv-sb-add">＋ 대장 추가</button>
+          <button class="inv-sb-btn" id="inv-sb-export">↓ 내보내기 (Excel)</button>
+        </div>
+      </div>
+      <div class="inv-main" id="inv-main">
+        <div id="inv-tab-bar" class="inv-tab-bar"></div>
+        <div id="inv-action-bar" class="inv-action-bar"></div>
+        <div class="inv-body" id="inv-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INVENTORY MODAL -->
+  <div class="inv-modal-bg" id="inv-modal-bg">
+    <div class="inv-modal">
+      <div class="inv-modal-hd" id="inv-modal-title"></div>
+      <div class="inv-modal-bd" id="inv-modal-body"></div>
+      <div class="inv-modal-ft">
+        <button class="btn btn-ghost btn-sm" id="inv-modal-cancel">취소</button>
+        <button class="btn btn-primary" id="inv-modal-ok">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTACTS -->
+  <div class="view" id="view-contacts">
+    <div class="view-header">
+      <div>
+        <div class="view-title">연락처</div>
+        <div class="view-subtitle">담당자 관리</div>
+      </div>
+      <div class="header-actions">
+        <input class="filter-input" id="contact-search" placeholder="이름·업체·이메일 검색..." oninput="renderContacts()" style="width:180px">
+        <button class="btn btn-ghost btn-sm" onclick="exportContactsCSV()" title="연락처 Excel(CSV) 내보내기">↓ Excel</button>
+        <button class="btn btn-primary" onclick="openContactModal()">＋ 추가</button>
+      </div>
+    </div>
+    <div class="contacts-content">
+      <div class="contact-table-wrap" id="contacts-content">
+        <table class="contact-table" id="contact-table">
+          <thead id="contact-thead"></thead>
+          <tbody id="contact-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="view" id="view-settings">
+    <div class="view-header">
+      <div><div class="view-title">설정</div><div class="view-subtitle">카테고리 · 태그 · 우선순위 · 상태 관리</div></div>
+    </div>
+    <div class="settings-content">
+
+      <!-- FONT -->
+      <div class="settings-section">
+        <div class="settings-section-header" onclick="toggleSection('font')" style="cursor:pointer;user-select:none">
+          <span class="settings-section-title">🔤 글꼴 설정</span>
+          <span id="sec-chev-font" style="margin-left:auto;font-size:12px;color:var(--text2);transition:transform .2s">▼</span>
+        </div>
+        <div id="sec-body-font" style="padding:14px 18px;display:flex;align-items:center;gap:12px;">
+          <span style="font-size:12px;color:var(--text2);white-space:nowrap">글꼴 선택</span>
+          <select id="font-select" class="filter-select" style="min-width:160px" onchange="applyFont(this.value)"></select>
+          <span style="font-size:11px;color:var(--text3)">※ 시스템에 설치된 폰트만 적용됩니다</span>
+        </div>
+      </div>
+
+      <!-- HELP -->
+      <div class="settings-section">
+        <div class="settings-section-header" onclick="toggleSection('help')" style="cursor:pointer;user-select:none;">
+          <span class="settings-section-title">❓ 도움말</span>
+          <span id="sec-chev-help" style="margin-left:auto;font-size:12px;color:var(--text2);transition:transform .2s">▶</span>
+        </div>
+        <div id="sec-body-help" style="display:none">
+
+          <div class="help-group">
+            <div class="help-group-title">▦ 캘린더 (대시보드)</div>
+            <div class="help-item"><span class="help-key">통계 카드</span><span class="help-desc">전체 활성·진행 중·오늘 완료·기한 초과를 실시간으로 표시합니다.</span></div>
+            <div class="help-item"><span class="help-key">주간 업무 엑셀</span><span class="help-desc">주간 업무 헤더의 `↓ Excel` 버튼으로 이번 주 업무 목록을 엑셀 파일로 추출합니다.</span></div>
+            <div class="help-item"><span class="help-key">날짜 클릭</span><span class="help-desc">해당 날짜의 시작·마감 업무가 아래 패널에 펼쳐집니다. 항목 클릭 시 수정 모달로 이동합니다.</span></div>
+            <div class="help-item"><span class="help-key">월간/연간 업무</span><span class="help-desc">반복 업무를 관리하며, 완료 체크 시 캘린더·칸반·대장에 연결된 업무가 자동 생성/동기화됩니다.</span></div>
+          </div>
+
+          <div class="help-group">
+            <div class="help-group-title">⊞ 칸반 보드</div>
+            <div class="help-item"><span class="help-key">컬럼 구성</span><span class="help-desc">설정 → 상태의 칸반 체크박스로 표시할 컬럼을 자유롭게 구성합니다.</span></div>
+            <div class="help-item"><span class="help-key">드래그앤드롭</span><span class="help-desc">카드를 다른 컬럼으로 드래그하면 상태가 즉시 변경됩니다.</span></div>
+          </div>
+
+          <div class="help-group">
+            <div class="help-group-title">≡ 업무 대장</div>
+            <div class="help-item"><span class="help-key">▶ 인라인 편집</span><span class="help-desc">제목 옆 ▶ 클릭으로 시작일·마감일·태그·카테고리·우선순위·상태·담당자를 행 아래에서 바로 편집합니다.</span></div>
+            <div class="help-item"><span class="help-key">그룹 뷰</span><span class="help-desc">카테고리별로 업무를 그룹화하여 표시합니다. 각 그룹 헤더 클릭으로 접기/펼치기가 가능합니다.</span></div>
+            <div class="help-item"><span class="help-key">복합 필터 / CSV</span><span class="help-desc">다양한 조건으로 업무를 검색하고, `↓ CSV` 버튼으로 필터링된 목록을 엑셀용 CSV로 내보냅니다.</span></div>
+          </div>
+
+          <div class="help-group">
+            <div class="help-group-title">📦 인벤토리</div>
+            <div class="help-item"><span class="help-key">대장 관리</span><span class="help-desc">좌측 사이드바에서 여러 개의 대장을 생성하고, `⠿` 손잡이를 드래그하여 순서를 변경합니다.</span></div>
+            <div class="help-item"><span class="help-key">탭 시스템</span><span class="help-desc">대장 내부에 여러 탭을 만들어 데이터를 분류하며, 탭 제목의 `⠿` 손잡이로 순서를 바꿀 수 있습니다.</span></div>
+            <div class="help-item"><span class="help-key">멀티 탭 엑셀</span><span class="help-desc">`↓ 내보내기 (Excel)` 클릭 시 내보낼 대장과 탭을 선택할 수 있으며, 각 탭은 엑셀의 개별 시트(Sheet)로 생성됩니다.</span></div>
+          </div>
+
+          <div class="help-group">
+            <div class="help-group-title">👤 연락처</div>
+            <div class="help-item"><span class="help-key">카테고리별 정/부</span><span class="help-desc">한 연락처가 여러 카테고리에 속할 수 있으며, 각 카테고리마다 정/부 담당 여부를 지정합니다.</span></div>
+            <div class="help-item"><span class="help-key">엑셀 내보내기</span><span class="help-desc">`↓ Excel` 버튼으로 연락처 목록을 내보냅니다. 관리 편의를 위해 수정·삭제 버튼은 항상 표시됩니다.</span></div>
+          </div>
+
+          <div class="help-group">
+            <div class="help-group-title">⚙ 설정 및 데이터</div>
+            <div class="help-item"><span class="help-key">커스텀 설정</span><span class="help-desc">카테고리, 태그, 우선순위, 상태의 이름과 색상을 자유롭게 변경하여 시스템에 즉시 반영합니다.</span></div>
+            <div class="help-item"><span class="help-key">JSON 백업</span><span class="help-desc">`🔒 지금 백업` 버튼으로 전체 데이터(인벤토리 포함)를 JSON 파일로 저장하고, 백업 탭에서 복원할 수 있습니다.</span></div>
+          </div>
+
+        </div>
+      </div>
+      <!-- BACKUP -->
+      <div class="settings-section">
+        <div class="settings-section-header" onclick="toggleSection('backup')" style="cursor:pointer;user-select:none">
+          <span class="settings-section-title">🔒 백업 설정</span>
+          <span id="sec-chev-backup" style="margin-left:auto;font-size:12px;color:var(--text2);transition:transform .2s">▼</span>
+        </div>
+        <div id="sec-body-backup" style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:180px;">
+              <div class="ep-label" style="margin-bottom:6px">백업 알림 주기</div>
+              <select class="field-select" id="backup-interval-sel" onchange="saveBackupInterval(this.value)" style="width:100%">
+                <option value="1">매일</option>
+                <option value="3">3일마다</option>
+                <option value="7" selected>7일마다</option>
+                <option value="14">2주마다</option>
+                <option value="30">30일마다</option>
+                <option value="0">알림 안 함</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:180px;">
+              <div class="ep-label" style="margin-bottom:6px">마지막 백업</div>
+              <div id="last-backup-display" style="font-family:var(--mono);font-size:12px;color:var(--text2);padding:7px 0;">기록 없음</div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="doBackup()" style="align-self:flex-start;gap:8px;">
+            🔒 지금 백업 (JSON 다운로드)
+          </button>
+          <div style="font-size:11px;color:var(--text2);line-height:1.7;background:var(--s2);padding:10px 12px;border-radius:var(--r);border:1px solid var(--border)">
+            백업 파일은 <code style="font-family:var(--mono);background:var(--s3);padding:1px 5px;border-radius:3px">taskflow_backup_YYYY-MM-DD.json</code> 형태로 다운로드됩니다.<br>
+            브라우저 기본 다운로드 폴더에 저장됩니다. 브라우저 설정에서 다운로드 위치를 고정하면 항상 같은 폴더로 백업됩니다.<br>
+            복원 시 사이드바의 <strong>백업</strong> 탭 → <strong>가져오기</strong>를 사용하세요.
+          </div>
+        </div>
+      </div>
+
+      <!-- CATEGORIES -->
+      <div class="settings-section">
+        <div class="settings-section-header" onclick="toggleSection('cats')" style="cursor:pointer;user-select:none">
+          <span class="settings-section-title">카테고리</span>
+          <span id="sec-chev-cats" style="margin-left:auto;font-size:12px;color:var(--text2);transition:transform .2s">▼</span>
+        </div>
+        <div id="sec-body-cats">
+        <div class="settings-items" id="settings-cats"></div>
+        <div style="padding:0 16px 14px">
+          <div class="settings-add-row">
+            <input class="settings-add-input" id="new-cat-input" placeholder="새 카테고리 이름..." onkeydown="if(event.key==='Enter')addCategory()">
+            <button class="btn btn-primary btn-sm" onclick="addCategory()">＋ 추가</button>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <!-- TAGS -->
+      <div class="settings-section">
+        <div class="settings-section-header" onclick="toggleSection('tags')" style="cursor:pointer;user-select:none">
+          <span class="settings-section-title">태그</span>
+          <span id="sec-chev-tags" style="margin-left:auto;font-size:12px;color:var(--text2);transition:transform .2s">▼</span>
+        </div>
+        <div id="sec-body-tags">
+        <div class="settings-items" id="settings-tags"></div>
+        <div style="padding:0 16px 14px">
+          <div class="settings-add-row">
+            <input class="settings-add-input" id="new-tag-input" placeholder="새 태그 이름..." onkeydown="if(event.key==='Enter')addTag()">
+            <button class="btn btn-primary btn-sm" onclick="addTag()">＋ 추가</button>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <!-- PRIORITIES -->
+      <div class="settings-section">
+        <div class="settings-section-header" onclick="toggleSection('pri')" style="cursor:pointer;user-select:none">
+          <span class="settings-section-title">우선순위</span>
+          <span id="sec-chev-pri" style="margin-left:auto;font-size:12px;color:var(--text2);transition:transform .2s">▼</span>
+        </div>
+        <div id="sec-body-pri">
+        <div class="settings-items" id="settings-priorities"></div>
+        <div style="padding:0 16px 14px">
+          <div class="settings-add-row">
+            <input class="settings-add-input" id="new-pri-key"   placeholder="키 (영문, 예: urgent)" style="width:130px;flex:none">
+            <input class="settings-add-input" id="new-pri-label" placeholder="표시 이름" style="flex:1">
+            <input type="color" id="new-pri-color" value="#F4A832" title="색상" style="width:34px;height:34px;border:1px solid var(--border);border-radius:4px;background:var(--s2);cursor:pointer;padding:2px;">
+            <button class="btn btn-primary btn-sm" onclick="addPriority()">＋ 추가</button>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <!-- STATUSES -->
+      <div class="settings-section">
+        <div class="settings-section-header" onclick="toggleSection('status')" style="cursor:pointer;user-select:none">
+          <span class="settings-section-title">상태</span>
+          <span id="sec-chev-status" style="margin-left:auto;font-size:12px;color:var(--text2);transition:transform .2s">▼</span>
+        </div>
+        <div id="sec-body-status">
+        <div class="settings-items" id="settings-statuses"></div>
+        <div style="padding:0 16px 14px">
+          <div class="settings-add-row">
+            <input class="settings-add-input" id="new-st-key"   placeholder="키 (영문, 예: review)" style="width:130px;flex:none">
+            <input class="settings-add-input" id="new-st-label" placeholder="표시 이름" style="flex:1">
+            <input type="color" id="new-st-color" value="#888888" title="색상" style="width:34px;height:34px;border:1px solid var(--border);border-radius:4px;background:var(--s2);cursor:pointer;padding:2px;">
+            <button class="btn btn-primary btn-sm" onclick="addStatus()">＋ 추가</button>
+          </div>
+        </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BACKUP VIEW -->
+  <div class="view" id="view-backup">
+    <div class="view-header">
+      <div><div class="view-title">백업 & 복원</div><div class="view-subtitle">데이터 백업 · 가져오기 · 알림 주기 설정</div></div>
+    </div>
+    <div class="settings-content">
+      <div class="settings-section">
+        <div class="settings-section-header">
+          <span class="settings-section-title">📤 백업 다운로드</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:180px;">
+              <div class="ep-label" style="margin-bottom:6px">백업 알림 주기</div>
+              <select class="field-select" id="backup-interval-sel" onchange="saveBackupInterval(this.value)" style="width:100%">
+                <option value="1">매일</option>
+                <option value="3">3일마다</option>
+                <option value="7" selected>7일마다</option>
+                <option value="14">2주마다</option>
+                <option value="30">30일마다</option>
+                <option value="0">알림 안 함</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:180px;">
+              <div class="ep-label" style="margin-bottom:6px">마지막 백업</div>
+              <div id="last-backup-display" style="font-family:var(--mono);font-size:12px;color:var(--text2);padding:7px 0;">기록 없음</div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="doBackup()" style="align-self:flex-start;gap:8px;">
+            💾 백업 다운로드
+          </button>
+          <div style="font-size:11px;color:var(--text2);line-height:1.7;background:var(--s2);padding:10px 12px;border-radius:var(--r);border:1px solid var(--border)">
+            전체 데이터(업무·설정·월간·연간·연락처·인벤토리)를 <code style="font-family:var(--mono);background:var(--s3);padding:1px 5px;border-radius:3px">taskflow_backup_YYYY-MM-DD.json</code> 으로 저장합니다.<br>
+            Chrome/Edge에서는 저장 위치를 직접 선택할 수 있습니다.
+          </div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-header">
+          <span class="settings-section-title">📥 가져오기 (복원)</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;">
+          <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()" style="align-self:flex-start;gap:8px;">
+            📂 JSON 파일 선택
+          </button>
+          <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+          <div style="font-size:11px;color:var(--text2);line-height:1.7;background:var(--s2);padding:10px 12px;border-radius:var(--r);border:1px solid var(--border)">
+            ID 기준 중복을 건너뛰고 신규 항목만 추가합니다. 기존 데이터는 보존됩니다.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOnBg(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-title">업무 추가</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <div class="field-label">제목 *</div>
+        <input class="field-input" id="f-title" placeholder="업무 제목">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <div class="field-label">시작일</div>
+          <input class="field-select" id="f-start" type="date">
+        </div>
+        <div class="field">
+          <div class="field-label">마감일</div>
+          <input class="field-select" id="f-due" type="date">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <div class="field-label">카테고리</div>
+          <select class="field-select" id="f-cat"></select>
+        </div>
+        <div class="field">
+          <div class="field-label">태그</div>
+          <div class="tag-multi" id="tag-multi" onclick="toggleTagDropdown(event)">
+            <div class="tag-multi-selected" id="tag-multi-selected">
+              <span class="tag-placeholder" id="tag-placeholder">태그 선택...</span>
+            </div>
+            <div class="tag-dropdown" id="tag-dropdown"></div>
+          </div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <div class="field-label">우선순위</div>
+          <select class="field-select" id="f-priority"></select>
+        </div>
+        <div class="field">
+          <div class="field-label">상태</div>
+          <select class="field-select" id="f-status"></select>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-label">담당자</div>
+        <div class="tag-multi" id="assignee-multi" onclick="toggleAssigneeDropdown(event)">
+          <div class="tag-multi-selected" id="assignee-multi-selected">
+            <span class="tag-placeholder" id="assignee-placeholder">담당자 선택...</span>
+          </div>
+          <div class="tag-dropdown" id="assignee-dropdown"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">취소</button>
+      <button class="btn btn-danger btn-sm" id="modal-delete-btn" onclick="deleteCurrentTask()" style="display:none">삭제</button>
+      <button class="btn btn-primary" onclick="saveTask()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<!-- SCRIPTS -->
+<script src="js/core.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/data.js"></script>
+<script src="js/backup.js"></script>
+<script src="js/modal.js"></script>
+<script src="js/contacts.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/kanban.js"></script>
+<script src="js/ledger.js"></script>
+<script src="js/inventory.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
