@@ -1,122 +1,142 @@
 # 🌊 TASKFLOW — 업무관리 시스템
 
-> **"빌드 없이, 서버 없이, 외부 연결 없이."**
-> 브라우저 하나로 모든 업무를 완벽하게 관리하는 완전 오프라인 데스크톱 웹앱입니다.
+> **v2 개발 진행 중** — Go 백엔드 + PostgreSQL + 멀티유저 + GLPI 수준 인벤토리
+>
+> v1(브라우저 단독 오프라인 버전)은 [`v1-browser`](../../tree/v1-browser) 브랜치에서 유지됩니다.
 
 ---
 
-## 🏗️ 1. 핵심 설계 (Core Philosophy)
+## 🎯 1. 프로젝트 목표
 
-인터넷이 없는 환경에서도 사용 가능한 엄격한 보안 환경(CSP `connect-src 'none'`)에서도 제약 없이 동작하도록 설계되었습니다.
+| 버전 | 설명 | 브랜치 |
+| :--- | :--- | :--- |
+| **v1** | 브라우저 단독 실행, localStorage, 오프라인 완전 지원 | [`v1-browser`](../../tree/v1-browser) |
+| **v2** | Go 백엔드 + PostgreSQL, 멀티유저 로그인, 팀 내부 서버 배포 | `main` (현재) |
 
-| 🧩 항목        | 📝 내용                                                            |
-| :------------ | :---------------------------------------------------------------- |
-| **런타임**    | 브라우저 단독 실행 (파일 직접 열기: `file://`)                    |
-| **저장소**    | `localStorage` (100% 오프라인 데이터 보관)                        |
-| **의존성**    | **제로 (Zero)** — 외부 CDN, API 호출, 라이브러리 import 절대 금지 |
-| **파일 구조** | HTML / CSS / JS 모듈별 정적 분리 (`src/`)                         |
-| **커스텀**    | 다크·라이트 테마 / 시스템 폰트 선택 지원                          |
+### v2 핵심 목표
 
-### 📊 프로젝트 현황 (Stats)
-
-| 📄 파일 영역      | 🛠️ 역할                         | 📏 총 줄 수 |
-| :--------------- | :----------------------------- | :--------- |
-| `src/index.html` | UI 구조 및 엔트리포인트        | ~690줄     |
-| `src/css/`       | 테마 및 레이아웃 스타일        | ~860줄     |
-| `src/js/`        | 비즈니스 로직 (10개 모듈 분리) | ~3,200줄   |
+| 항목 | 내용 |
+| :--- | :--- |
+| **백엔드** | Go 1.22 + Echo v4 |
+| **DB** | PostgreSQL 16 |
+| **인증** | JWT (Access 15분 / Refresh 14일) |
+| **인벤토리** | GLPI 수준 자산관리 (변경 이력·담당자·업무 연결) |
+| **배포** | 단일 서버, Nginx 리버스 프록시, systemd |
+| **프론트** | Vite + Vanilla JS (기존 v1 UI 재사용) |
 
 ---
 
-## 🤖 2. 차세대 개발 워크플로우 (AI Collaboration)
+## 🏗️ 2. 기술 스택
 
-이 프로젝트는 **Claude Code**와 **Gemini CLI**가 서로의 강점을 극대화하여 협업하는 방식으로 개발됩니다.
-
-### ⚔️ AI 역할 분담 (Role Separation)
-
-| 에이전트        | 🌟 강점                             | 🎯 주요 책임 (Responsibility)                                            |
-| :-------------- | :--------------------------------- | :---------------------------------------------------------------------- |
-| **Claude Code** | 설계 능력이 뛰어나고 정밀한 코딩   | **[수술실]** 신규 기능 설계, 복잡한 로직 구현, 버그 수정                |
-| **Gemini CLI**  | 100만+ 토큰의 대용량 컨텍스트 처리 | **[사령탑]** 전체 문서(`README.md`) 관리, 실시간 디버깅, 최신 기술 연구 |
-
-### 🤝 협업 프로토콜 (Synchronization)
-
-1. **상태 공유 (`HANDOFF.md`)**: 두 AI가 서로의 작업 내역을 이어받는 "릴레이 바톤" 역할을 합니다.
-2. **세션 훅 (`.claude/hooks/`)**: 세션 시작/종료 시 자동으로 작업 로그를 기록하여 문맥이 끊기지 않게 합니다.
-3. **규칙 엄수**: `CLAUDE.md`와 `GEMINI.md` 지시서를 통해 프로젝트의 기술적 제약 사항을 공유합니다.
+```
+Frontend   Vite 5 + Vanilla JS (ES Modules)
+Backend    Go 1.22 + Echo v4
+Database   PostgreSQL 16
+Proxy      Nginx
+Auth       JWT (HttpOnly Refresh Cookie)
+Deploy     systemd (Docker 미사용, 추후 도입 예정)
+```
 
 ---
 
-## 📂 3. 상세 프로젝트 구조 (Detailed Structure)
+## 📂 3. 프로젝트 구조
 
-```text
+```
 taskflow/
-├── 📂 src/                   # 📦 애플리케이션 소스 코드
-│   ├── 📄 index.html         # 메인 UI 구조 (브라우저로 직접 실행)
-│   ├── 📂 css/               # 🎨 스타일시트 폴더
-│   │   └── style.css         # 전체 UI 스타일 및 테마 정의
-│   └── 📂 js/                # ⚙️ 자바스크립트 모듈 폴더
-│       ├── core.js           # 전역 상태, 스토리지 키, 유틸리티
-│       ├── ui.js             # 공통 UI 컴포넌트, 테마, 시계, 마크다운
-│       ├── data.js           # 업무(Task) CRUD 및 데이터 동기화
-│       ├── calendar.js       # 대시보드, 캘린더, 일정(Schedules), 주간업무
-│       ├── kanban.js         # 칸반 보드 렌더링 및 드래그 앤 드롭
-│       ├── ledger.js         # 업무 대장, 필터링, 정렬, CSV 내보내기
-│       ├── inventory.js      # 인벤토리 관리 시스템 (독립 모듈)
-│       ├── backup.js         # JSON 백업/복구 및 파일 시스템 연동
-│       ├── modal.js          # 공용 입력 모달 및 담당자 선택
-│       └── app.js            # 어플리케이션 초기화 및 내비게이션
+├── backend/                   # Go API 서버
+│   ├── cmd/api/main.go
+│   ├── internal/
+│   │   ├── auth/              # JWT 발급·검증·미들웨어
+│   │   ├── models/            # DB 구조체
+│   │   ├── handlers/          # Echo 라우트 핸들러
+│   │   ├── repository/        # DB 접근 계층
+│   │   └── service/           # 비즈니스 로직
+│   ├── migrations/            # SQL 마이그레이션
+│   └── go.mod
 │
-├── 📂 docs/                  # 📚 프로젝트 문서
-│   ├── 🗺️ DESIGN.md          # 디자인 시스템 및 UI/UX 스펙
-│   └── 📄 GEMINI.md          # Gemini CLI 전용 관리 지시서
+├── frontend/                  # Vite 프론트엔드
+│   ├── src/
+│   │   ├── js/                # v1에서 이전한 모듈 (모듈화)
+│   │   ├── css/style.css
+│   │   ├── api/               # 백엔드 API 통신 레이어
+│   │   └── index.html
+│   ├── dist/                  # 빌드 결과 (Nginx 제공)
+│   └── package.json
 │
-├── 📂 bin/                   # 🔧 실행 스크립트
-│   └── 📂 scripts/
-│       └── setup-github-mcp.sh  # GitHub MCP 환경 설정
+├── docs/
+│   ├── setup-guide/           # 📚 환경 구성 가이드 (아래 참조)
+│   └── DESIGN.md
 │
-├── 📝 README.md              # [Gemini 전담] 프로젝트 통합 가이드
-├── 🤝 HANDOFF.md             # AI 간 작업 상태 인계 기록
-├── 📄 CLAUDE.md              # Claude Code 전용 개발 지시서
-│
-├── 📂 .claude/               # 🦾 Claude Code 설정
-│   ├── 📂 rules/              # 자동 적용 규칙 파일
-│   └── 📂 hooks/              # 세션 라이프사이클 훅
-│
-├── 📂 .gemini/               # 🌌 Gemini CLI 설정
-└── 📂 example/               # 💡 샘플 데이터셋
+├── src/                       # v1 소스 (v1-browser 브랜치 기준)
+├── CLAUDE.md                  # Claude Code 지시서
+├── HANDOFF.md                 # AI 간 작업 인계 기록
+└── .mcp.json                  # MCP 서버 설정
 ```
 
 ---
 
-## 🚀 4. 시작하기 (Quick Start)
+## 🚀 4. Quick Start
 
-### 사용자 (User)
-1. `src/index.html` 파일을 크롬(Chrome)이나 엣지(Edge) 브라우저로 엽니다.
-2. 바로 업무를 추가하거나, `example/` 폴더의 샘플 데이터를 **백업 & 복원** 탭에서 가져오세요.
+### 환경 구성 가이드
 
-### 개발자 (AI Agents)
+상세 설치·설정은 각 가이드를 참조하세요.
 
-#### 🦾 Claude Code 사용 (개발 위주)
+| 가이드 | 내용 |
+| :--- | :--- |
+| [📦 Client 환경 구성](docs/setup-guide/client-guide/README.md) | Node.js, Vite 설정, 빌드, API 연동 |
+| [🖥️ Server 환경 구성](docs/setup-guide/server-guide/README.md) | Go 설치, Nginx, systemd, 배포 |
+| [🗄️ DB 환경 구성](docs/setup-guide/DB-guide/README.md) | PostgreSQL 설치, 스키마, 마이그레이션, 백업 |
+| [🤖 AI 도구 환경 구성](docs/setup-guide/AI-guide/README.md) | Claude Code, Gemini CLI, MCP 설치, 훅·커맨드 |
+
+### 빠른 실행 순서
+
 ```bash
-claude
-# 첫 메시지: "최근 세션 확인하고 이어서 진행해줘"
-```
+# 1. 소스 클론
+git clone https://github.com/jomarusoup/Taskflow.git
+cd Taskflow
 
-#### 🌌 Gemini CLI 사용 (관리/디버깅 위주)
-```bash
-gemini
-# 첫 메시지: "HANDOFF.md와 GEMINI.md를 읽고 이어서 진행해줘"
+# 2. DB 스키마 적용 (PostgreSQL 설치 후)
+psql -U taskflow -d taskflow -h 127.0.0.1 -f backend/migrations/001_init.sql
+
+# 3. 백엔드 빌드 및 실행
+cd backend && go mod tidy && go build -o bin/taskflow ./cmd/api
+./bin/taskflow
+
+# 4. 프론트엔드 빌드
+cd ../frontend && npm install && npm run build
+
+# 5. Nginx 재시작
+sudo systemctl restart nginx
 ```
 
 ---
 
-## 📅 5. 주요 기능 목록
+## 📅 5. 주요 기능
 
-*   **대시보드**: 캘린더 연동, 주간/월간/연간 업무 요약, 실시간 시계.
-*   **칸반 보드**: 드래그 앤 드롭으로 상태 관리, 컬럼 순서 변경.
-*   **업무 대장**: 고성능 필터링 및 정렬, 그룹별 카테고리 뷰, 상세 인라인 편집 패널(다중 카테고리/연결 업무 다중 선택 지원).
-    *   **CSV 내보내기**: 현재 필터 상태 기준으로 CSV 파일 다운로드 (한국어 엑셀 호환 UTF-8 BOM).
-    *   **메모 복사**: 확장 패널의 메모를 원클릭으로 클립보드에 복사.
-*   **인벤토리**: 다중 대장 지원, 엑셀 수준의 열 리사이즈 및 행 드래그 정렬.
-*   **연락처**: 업무와 연동되는 담당자 관리 시스템.
-*   **백업 & 복원**: `localStorage` 전체 데이터를 단일 JSON 파일로 추출 및 복구.
+| 기능 | 설명 |
+| :--- | :--- |
+| **대시보드** | 캘린더 연동, 주간·월간·연간 업무, 기한 초과·오늘 마감 퀵 패널 |
+| **칸반 보드** | 드래그 앤 드롭 상태 관리 |
+| **업무 대장** | 필터링·정렬·그룹뷰, 다중 카테고리·태그, 연결 업무, CSV 내보내기 |
+| **연락처** | 담당자 관리, 업무 연결, 카테고리별 정·부 구분 |
+| **인벤토리** | 다중 원장·탭·컬럼 커스텀, 자산 변경 이력 (v2 확장 예정) |
+| **멀티유저** | JWT 로그인, 역할(admin·member) 구분 (v2) |
+
+---
+
+## 🤖 6. AI 협업 워크플로
+
+이 프로젝트는 **Claude Code**와 **Gemini CLI**가 역할을 분담하여 협업합니다.
+
+| 에이전트 | 담당 |
+| :--- | :--- |
+| **Claude Code** | 코드 구현, 버그 수정, `.claude/` 설정 관리, MCP 도구 |
+| **Gemini CLI** | 기능 기획, 설계 문서, README 갱신, 아이디어 탐색 |
+
+AI 도구 설치·설정 방법: [AI-guide](docs/setup-guide/AI-guide/README.md)
+
+### 협업 프로토콜
+
+1. **HANDOFF.md** — Claude ↔ Gemini 전환 시 작업 상태 인계
+2. **세션 훅** — 세션 시작·종료 시 자동 스냅샷 저장
+3. **CLAUDE.md** — Claude 전용 프로젝트 지시서 (규칙·구조·주의사항)
