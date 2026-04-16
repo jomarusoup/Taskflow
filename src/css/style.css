@@ -694,9 +694,9 @@ th.inv-col-drag-right{border-right:2px solid var(--amber)!important;}
 .contact-table td{padding:8px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);vertical-align:middle;color:var(--text);}
 .contact-table td:last-child{border-right:none;}
 .contact-table tr:hover td{background:var(--s2);}
-.contact-table .ct-type-badge{font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600;}
-.contact-table .ct-type-main{background:rgba(106,173,255,.15);color:var(--blue);}
-.contact-table .ct-type-sub{background:rgba(100,100,110,.2);color:var(--text2);}
+.contact-table .ct-type-badge,.contact-grid .ct-type-badge{font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600;}
+.contact-table .ct-type-main,.contact-grid .ct-type-main{background:rgba(106,173,255,.15);color:var(--blue);}
+.contact-table .ct-type-sub,.contact-grid .ct-type-sub{background:rgba(100,100,110,.2);color:var(--text2);}
 .contact-table .ct-actions{display:flex;gap:4px;transition:opacity .15s;}
 .contact-empty{padding:40px;text-align:center;font-size:13px;color:var(--text2);}
 /* contact modal */
