@@ -826,10 +826,26 @@ function buildContactList(t){
   if(!linked.length) return '<span class="link-empty">연결된 연락처 없음</span>';
   const rows = linked.map(cid => {
     const c = contacts.find(x => x.id === cid); if(!c) return '';
-    const typeLabel = c.type === 'main' ? '정' : c.type === 'sub' ? '부' : '';
-    return `<tr><td>${esc(c.company||'')}</td><td>${esc(c.name||'')}</td><td>${esc(c.title||'')}</td><td>${esc(typeLabel)}</td><td>${esc(c.officePhone||'')}</td><td>${esc(c.email||'')}</td><td class="cg-rm"><button class="link-item-rm" onclick="removeTaskContact('${esc(t.id)}','${esc(cid)}')" title="연결 해제">×</button></td></tr>`;
+    const catBadges = (c.categories||[]).length
+      ? (c.categories||[]).map(cat=>`<span class="tag">${esc(cat)}</span>`).join(' ')
+      : '<span class="tag">미분류</span>';
+    const roleBadges = (c.categoryRoles||[]).length
+      ? c.categoryRoles.map(r=>`<span class="ct-type-badge ${r.role==='main'?'ct-type-main':'ct-type-sub'}">${esc(r.category)} ${r.role==='main'?'정':'부'}</span>`).join(' ')
+      : (c.type==='main'?'<span class="ct-type-badge ct-type-main">정</span>':'<span class="ct-type-badge ct-type-sub">부</span>');
+    return `<tr>
+      <td>${esc(c.company||'')}</td>
+      <td style="font-weight:500">${esc(c.name||'')}</td>
+      <td>${esc(c.title||'')}</td>
+      <td>${catBadges}</td>
+      <td>${roleBadges}</td>
+      <td style="font-family:var(--mono);font-size:11px">${esc(c.officePhone||'—')}</td>
+      <td style="font-family:var(--mono);font-size:11px">${esc(c.mobilePhone||'—')}</td>
+      <td style="font-size:11px;color:var(--text2)">${esc(c.email||'')}</td>
+      <td style="font-size:11px;color:var(--text2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.memo||'')}</td>
+      <td class="cg-rm"><button class="link-item-rm" onclick="removeTaskContact('${esc(t.id)}','${esc(cid)}')" title="연결 해제">×</button></td>
+    </tr>`;
   }).join('');
-  return `<table class="contact-grid"><thead><tr><th>업체명</th><th>이름</th><th>직책</th><th>정·부</th><th>회사번호</th><th>이메일</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+  return `<table class="contact-grid"><thead><tr><th>업체명</th><th>이름</th><th>직책</th><th>카테고리</th><th>정·부</th><th>회사번호</th><th>H.P</th><th>이메일</th><th>메모</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 function addTaskContact(taskId){
   const sel = document.getElementById('ep-contact-sel-' + taskId); if(!sel) return;
