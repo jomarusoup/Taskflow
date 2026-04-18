@@ -120,7 +120,7 @@ function initIdCounter() {
   _idCounter = max; // 다음 genId() 호출 시 max+1 반환
 }
 
-function today()          { return new Date().toISOString().split('T')[0]; }
+function today()          { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function fmtDate(iso)     { if (!iso) return '—'; const [y,m,d]=iso.split('-'); return `${y}.${m}.${d}`; }
 function fmtDateShort(iso){ if (!iso) return ''; const [,m,d]=iso.split('-'); return `${m}/${d}`; }
 function isOverdue(t)     { if (!t.dueDate||t.status==='done'||t.status==='archived') return false; return t.dueDate < today(); }

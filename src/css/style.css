@@ -492,7 +492,7 @@ input[type="date"].field-input{appearance:none;-webkit-appearance:none;}
 .section-sub-header{padding:6px 16px;font-size:11px;font-weight:700;letter-spacing:1px;border-bottom:1px solid var(--border);}
 .section-sub-header.carry{background:rgba(0,113,227,.07);color:var(--amber);}
 /* 주간업무 grid 열 정렬: pri-bar | 제목 | 카테고리 | 날짜 | 기간 | 진행% | 상태 */
-.weekly-row{display:grid;grid-template-columns:4px minmax(0,1fr) 76px 150px 76px 160px;align-items:center;column-gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+.weekly-row{display:grid;grid-template-columns:4px minmax(0,1fr) minmax(60px,auto) minmax(110px,auto) minmax(56px,auto) minmax(130px,auto);align-items:center;column-gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
 .weekly-row:last-child{border-bottom:none;}
 .weekly-row:hover{background:var(--s2);}
 .weekly-pri-bar{width:4px;height:28px;border-radius:2px;align-self:center;}
@@ -511,7 +511,7 @@ input[type="date"].field-input{appearance:none;-webkit-appearance:none;}
 .weekly-st-active{background:rgba(106,173,255,.15);color:var(--blue);border:1px solid rgba(106,173,255,.3);}
 .weekly-empty{padding:14px 16px;font-size:12px;color:var(--text2);font-style:italic;}
 /* 연간업무 grid 열 정렬 */
-.annual-task-row{display:grid;grid-template-columns:20px minmax(0,1fr) 80px 80px;align-items:center;column-gap:10px;padding:9px 16px;cursor:pointer;transition:background .1s;}
+.annual-task-row{display:grid;grid-template-columns:20px minmax(0,1fr) minmax(60px,auto) minmax(60px,auto);align-items:center;column-gap:10px;padding:9px 16px;cursor:pointer;transition:background .1s;}
 .annual-task-row:hover{background:var(--s2);}
 .annual-task-title{font-size:13px;font-weight:500;word-break:break-word;}
 .annual-task-title.done{text-decoration:line-through;color:var(--text2);}
@@ -604,12 +604,12 @@ input[type="date"].field-input{appearance:none;-webkit-appearance:none;}
 .inv-table th,.inv-table td{padding:0;border-bottom:1px solid var(--border);border-right:1px solid var(--border);color:var(--text);vertical-align:top;overflow:hidden;white-space:nowrap;}
 .inv-table td:last-child,.inv-table th:last-child{border-right:none;}
 .inv-table th{font-weight:600;}
-.inv-fc{position:sticky;z-index:3;background:var(--s1);box-shadow:3px 0 5px -1px rgba(0,0,0,0.2);}
+.inv-fc{position:sticky;z-index:3;background:var(--s1)!important;box-shadow:3px 0 6px -1px rgba(0,0,0,0.25);border-right:1px solid var(--border);}
 .inv-fh{position:sticky;top:0;z-index:5;background:var(--s1)!important;}
-.inv-th-base{position:sticky;top:0;z-index:4;background:var(--s1);}
+.inv-th-base{position:sticky;top:0;z-index:4;background:var(--s1)!important;}
 .inv-th-tab{position:sticky;top:0;z-index:2;}
 .inv-table tr:hover td{background:var(--s2);}
-.inv-table tr:hover .inv-fc{background:var(--s2)!important;box-shadow:3px 0 5px -1px rgba(0,0,0,0.2);}
+.inv-table tr:hover .inv-fc{background:var(--s2)!important;box-shadow:3px 0 6px -1px rgba(0,0,0,0.25);border-right:1px solid var(--border);}
 .inv-th-inner{display:flex;align-items:center;padding:7px 8px;gap:4px;position:relative;height:100%;}
 .inv-th-drag{cursor:grab;font-size:11px;color:var(--text3);padding:0 2px;user-select:none;flex-shrink:0;line-height:1;}
 .inv-th-drag:hover{color:var(--text2);}
@@ -699,6 +699,10 @@ th.inv-col-drag-right{border-right:2px solid var(--amber)!important;}
 .contact-table .ct-type-sub,.contact-grid .ct-type-sub{background:rgba(100,100,110,.2);color:var(--text2);}
 .contact-table .ct-actions{display:flex;gap:4px;transition:opacity .15s;}
 .contact-empty{padding:40px;text-align:center;font-size:13px;color:var(--text2);}
+/* 연락처 팝업 정/부 버튼 */
+.role-btn{font-size:11px;font-weight:600;padding:2px 10px;border-radius:6px;border:1px solid var(--border);background:var(--s2);color:var(--text2);cursor:pointer;transition:all .15s;font-family:var(--sans);}
+.role-btn:hover{border-color:var(--border-h);color:var(--text);}
+.role-btn-active{background:rgba(106,173,255,.18);border-color:rgba(106,173,255,.5);color:var(--blue);}
 /* contact modal */
 .contact-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:center;justify-content:center;}
 .contact-modal{background:var(--s1);border:1px solid var(--border);border-radius:calc(var(--r)*1.5);width:560px;max-width:95vw;box-shadow:0 20px 60px var(--shadow);animation:modal-in .18s ease;}
