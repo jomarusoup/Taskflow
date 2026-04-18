@@ -57,7 +57,15 @@ function renderContacts() {
       ? (x.categories||[]).join(',').toLowerCase()
       : (x[contactSort.col]||'').toLowerCase();
     const av = getV(a), bv = getV(b);
-    return av < bv ? -contactSort.dir : av > bv ? contactSort.dir : 0;
+    if (av !== bv) return av < bv ? -contactSort.dir : contactSort.dir;
+    // 같은 정렬값이면 정(main) → 부(sub) 순으로 2차 정렬
+    const roleOf = x => {
+      const roles = (x.categoryRoles||[]).map(r=>r.role);
+      if (roles.includes('main')) return 0;
+      if (roles.includes('sub')) return 1;
+      return x.type === 'main' ? 0 : 1;
+    };
+    return roleOf(a) - roleOf(b);
   });
 
   if (!list.length) {
@@ -177,12 +185,10 @@ function renderContactCatMulti() {
       const role = contactCategoryRoles[cat] || 'main';
       return `<div style="display:flex;align-items:center;gap:8px;font-size:12px">
         <span class="tag" style="min-width:60px;text-align:center">${esc(cat)}</span>
-        <label style="display:flex;align-items:center;gap:3px;cursor:pointer">
-          <input type="radio" name="role-${esc(cat)}" value="main" ${role==='main'?'checked':''} onchange="setContactRole('${esc(cat)}','main')"> 정
-        </label>
-        <label style="display:flex;align-items:center;gap:3px;cursor:pointer">
-          <input type="radio" name="role-${esc(cat)}" value="sub" ${role==='sub'?'checked':''} onchange="setContactRole('${esc(cat)}','sub')"> 부
-        </label>
+        <div style="display:flex;gap:4px">
+          <button type="button" class="role-btn${role==='main'?' role-btn-active':''}" onclick="setContactRole('${esc(cat)}','main')">정</button>
+          <button type="button" class="role-btn${role==='sub'?' role-btn-active':''}" onclick="setContactRole('${esc(cat)}','sub')">부</button>
+        </div>
       </div>`;
     }).join('') + `</div>`;
 }
@@ -212,6 +218,14 @@ function removeContactCat(e, cat) {
 }
 function setContactRole(cat, role) {
   contactCategoryRoles[cat] = role;
+  // 해당 카테고리 버튼 하이라이트 즉시 갱신
+  const rs = document.getElementById('cm-roles-section');
+  if (!rs) return;
+  rs.querySelectorAll(`button.role-btn`).forEach(btn => {
+    const parentCat = btn.closest('div[style]')?.querySelector('.tag')?.textContent;
+    if (parentCat !== cat) return;
+    btn.classList.toggle('role-btn-active', btn.textContent === (role === 'main' ? '정' : '부'));
+  });
 }
 
 function closeContactModal() {
