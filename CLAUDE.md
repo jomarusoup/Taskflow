@@ -86,6 +86,7 @@ taskflow/
 4. **수정 전 보고** — 기능 추가·삭제 전 `[PLAN]`으로 승인 요청
 5. **마이그레이션 필수** — DB 스키마 변경 시 `migrations/` SQL 파일 동반 작성. 기존 파일 수정 금지, 새 파일 추가
 6. **코딩 스타일 준수** — `.claude/rules/common/coding-style.md` 적용
+7. **수정 완료 시 자동 git push** — 별도 요청 없이 수정 → `/verify` → `git push` 순서로 진행
 
 ---
 
