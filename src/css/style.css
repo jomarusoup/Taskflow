@@ -116,7 +116,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
 .cal-dow-row div:last-child{color:var(--blue);}
 .cal-grid-wrap{position:relative;}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
-.cal-cell{min-height:110px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px 4px 4px;cursor:pointer;transition:background .1s;position:relative;}
+.cal-cell{min-height:120px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px 4px 4px;cursor:pointer;transition:background .1s;position:relative;}
 .cal-cell:nth-child(7n){border-right:none;}
 .cal-cell:hover{background:rgba(255,255,255,.03);}
 .cal-cell.other-month .cal-day-num{opacity:.4;}
@@ -161,6 +161,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
 .type-label-due.overdue{background:rgba(224,92,106,.15);color:var(--red);}
 .cal-sch-dots{display:flex;gap:2px;padding:2px 4px;}
 .cal-sch-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.cal-sch-chips{position:absolute;bottom:4px;left:4px;right:4px;display:flex;flex-direction:column;gap:2px;}
+.cal-sch-chip{display:flex;align-items:center;padding:1px 4px;border-radius:3px;cursor:pointer;min-width:0;overflow:hidden;}
+.cal-sch-chip:hover{filter:brightness(1.15);}
+.cal-sch-chip-title{font-size:10px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;}
+.cal-sch-chip-more{font-size:10px;color:var(--text3);padding:1px 4px;}
 .cal-sch-section{border-top:1px solid var(--border);margin-top:8px;padding-top:8px;}
 .cal-sch-hd{display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
 .cal-sch-item{display:flex;align-items:center;gap:6px;padding:5px 8px;cursor:pointer;border-radius:var(--r);}
@@ -491,21 +496,21 @@ input[type="date"].field-input{appearance:none;-webkit-appearance:none;}
 .carry-badge{font-size:10px;background:rgba(0,113,227,.18);color:var(--amber);border:1px solid rgba(0,113,227,.4);padding:1px 7px;border-radius:10px;font-family:var(--mono);vertical-align:middle;}
 .section-sub-header{padding:6px 16px;font-size:11px;font-weight:700;letter-spacing:1px;border-bottom:1px solid var(--border);}
 .section-sub-header.carry{background:rgba(0,113,227,.07);color:var(--amber);}
-/* 주간업무 grid 열 정렬: pri-bar | 제목 | 카테고리 | 날짜 | 기간 | 진행% | 상태 */
-.weekly-row{display:grid;grid-template-columns:4px minmax(0,1fr) minmax(60px,auto) minmax(110px,auto) minmax(56px,auto) minmax(130px,auto);align-items:center;column-gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+/* 주간업무 grid 열 정렬: pri-bar | 제목 | 카테고리 | 날짜 | 진행% | 상태 */
+.weekly-row{display:grid;grid-template-columns:4px minmax(0,1fr) minmax(80px,auto) minmax(165px,auto) minmax(60px,auto) minmax(90px,auto);align-items:center;column-gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
 .weekly-row:last-child{border-bottom:none;}
 .weekly-row:hover{background:var(--s2);}
 .weekly-pri-bar{width:4px;height:28px;border-radius:2px;align-self:center;}
-.weekly-title{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.weekly-cat{font-size:11px;color:var(--text2);background:var(--s2);border:1px solid var(--border);padding:2px 6px;border-radius:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;}
-.weekly-date{font-family:var(--mono);font-size:11px;color:var(--text2);white-space:nowrap;text-align:center;}
+.weekly-title{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.weekly-cat{font-size:11px;color:var(--text2);background:var(--s2);border:1px solid var(--border);padding:2px 6px;border-radius:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;min-width:0;}
+.weekly-date{font-family:var(--mono);font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;min-width:0;}
 .weekly-date.overdue{color:var(--red);}
 .weekly-duration{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 6px;border-radius:20px;background:var(--s3);color:var(--text2);border:1px solid var(--border);white-space:nowrap;text-align:center;}
-.weekly-progress-wrap{display:flex;align-items:center;gap:4px;}
-.weekly-progress-bar{flex:1;height:4px;background:var(--s3);border-radius:2px;overflow:hidden;}
+.weekly-progress-wrap{display:flex;align-items:center;gap:4px;min-width:0;}
+.weekly-progress-bar{flex:1;height:4px;background:var(--s3);border-radius:2px;overflow:hidden;min-width:20px;}
 .weekly-progress-fill{height:100%;border-radius:2px;transition:width .3s;}
-.weekly-progress-txt{font-family:var(--mono);font-size:10px;color:var(--text2);width:22px;text-align:right;flex-shrink:0;}
-.weekly-status{display:flex;align-items:center;gap:4px;justify-content:flex-end;flex-wrap:nowrap;}
+.weekly-progress-txt{font-family:var(--mono);font-size:10px;color:var(--text2);width:28px;text-align:right;flex-shrink:0;}
+.weekly-status{display:flex;align-items:center;gap:4px;justify-content:flex-end;min-width:0;overflow:hidden;}
 .weekly-st-badge{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;white-space:nowrap;letter-spacing:.4px;}
 .weekly-st-done{background:rgba(100,100,110,.2);color:#888;border:1px solid rgba(100,100,110,.3);}
 .weekly-st-active{background:rgba(106,173,255,.15);color:var(--blue);border:1px solid rgba(106,173,255,.3);}

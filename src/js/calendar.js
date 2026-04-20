@@ -185,9 +185,12 @@ function renderCalendar() {
     const dow=i%7;
     cellDates.push(ds);
     const daySchs = schedules.filter(s=>s.date===ds);
-    const schDots = daySchs.length ? `<div class="cal-sch-dots">${daySchs.slice(0,3).map(s=>`<span class="cal-sch-dot" style="background:${s.color}"></span>`).join('')}</div>` : '';
+    const schChips = daySchs.length ? `<div class="cal-sch-chips">${
+      daySchs.slice(0,3).map(s=>`<div class="cal-sch-chip" style="border-left:2px solid ${s.color};background:${s.color}22" onclick="event.stopPropagation();openSchModal('${ds}',${JSON.stringify(s).replace(/"/g,'&quot;')})"><span class="cal-sch-chip-title">${esc(s.title)}</span></div>`).join('')
+    }${daySchs.length>3?`<div class="cal-sch-chip-more">+${daySchs.length-3}</div>`:''}</div>` : '';
     cellHtml+=`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}${isSel?' selected':''}${dow===0?' sunday':''}${dow===6?' saturday':''}" onclick="openCalDetail('${ds}')">
-      <div class="cal-cell-hd"><div class="cal-day-num">${dayNum}</div><button class="cal-cell-add" onclick="event.stopPropagation();openSchModal('${ds}')" title="일정 추가">＋</button></div>${schDots}
+      <div class="cal-cell-hd"><div class="cal-day-num">${dayNum}</div><button class="cal-cell-add" onclick="event.stopPropagation();openSchModal('${ds}')" title="일정 추가">＋</button></div>
+      ${schChips}
     </div>`;
   }
   const grid = document.getElementById('cal-grid');
@@ -424,7 +427,7 @@ function openSchModal(date, sch=null){
   const isEdit = !!sch;
   const overlay = document.createElement('div');
   overlay.className='modal-overlay';overlay.id='sch-modal-overlay';overlay.style.display='flex';
-  overlay.innerHTML=`<div class="modal" style="width:460px">
+  overlay.innerHTML=`<div class="modal" style="width:560px">
     <div class="modal-header"><div class="modal-title">${isEdit?'일정 수정':'일정 추가'}</div></div>
     <div class="modal-body">
       <div class="field">
@@ -454,7 +457,7 @@ function openSchModal(date, sch=null){
       </div>
       <div class="field">
         <label class="field-label">메모</label>
-        <textarea class="field-input" id="sch-memo" style="height:auto;min-height:80px;padding-top:10px" placeholder="일정 관련 메모를 입력하세요...">${esc(sch?.memo||'')}</textarea>
+        <textarea class="field-input" id="sch-memo" style="min-height:80px;padding-top:10px;resize:vertical" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" placeholder="일정 관련 메모를 입력하세요...">${esc(sch?.memo||'')}</textarea>
       </div>
     </div>
     <div class="modal-foot">
@@ -466,7 +469,11 @@ function openSchModal(date, sch=null){
   overlay.addEventListener('click',e=>{if(e.target===overlay)closeSchModal();});
   document.body.appendChild(overlay);
   const titleInp = document.getElementById('sch-title');
-  if (titleInp) setTimeout(()=>titleInp.focus(),50);
+  if (titleInp) setTimeout(()=>{
+    titleInp.focus();
+    const memo = document.getElementById('sch-memo');
+    if (memo) { memo.style.height='auto'; memo.style.height=memo.scrollHeight+'px'; }
+  },50);
 }
 function closeSchModal(){ document.getElementById('sch-modal-overlay')?.remove(); }
 function saveSchModal(editId){
@@ -585,7 +592,7 @@ function renderWeekly() {
           <div class="weekly-progress-bar"><div class="weekly-progress-fill" style="width:${pct}%;background:${fillColor}"></div></div>
           <span class="weekly-progress-txt">${pct}%</span>
         </div>
-        <span class="weekly-status">${simpleStatusBadge(t)}${statusBadge(t.status)}</span>
+        <span class="weekly-status">${statusBadge(t.status)}</span>
       </div>`;
     }).join('');
     return `<div class="weekly-group">
