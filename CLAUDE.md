@@ -1,4 +1,6 @@
-# TASKFLOW — Claude Code 지시서
+# TASKFLOW — Claude Code 지시서 (v2)
+
+> v1(브라우저 단독) 규칙은 `src/CLAUDE_V1.md` 참조.
 
 ## 세션 시작 시 필수 순서
 
@@ -15,29 +17,47 @@
 
 ## 프로젝트 개요
 
-인터넷이 없는 환경에서도 사용가능한 브라우저 단독 실행 업무관리 시스템.
+| 항목       | 내용                               |
+| ---------- | ---------------------------------- |
+| 프론트엔드 | Vite 5 + Vanilla JS (ES Modules)   |
+| 백엔드     | Go 1.22 + Echo v4                  |
+| DB         | PostgreSQL 16                      |
+| 인증       | JWT (Access 15분 / Refresh 14일)   |
+| 컨테이너   | Docker + Docker Compose            |
+| 프록시     | Nginx                              |
+| 배포       | 단일 서버, systemd                 |
 
-| 항목   | 내용                                        |
-| ------ | ------------------------------------------- |
-| 런타임 | 브라우저 단독 (서버 없음, 빌드 시스템 없음) |
-| 저장소 | localStorage 전용                           |
-| 제약   | 외부 CDN 없음, CSP connect-src none         |
-| 소스   | `src/` 디렉토리                             |
+---
 
-## 파일 구성 (src/)
+## 프로젝트 구조
 
-| 파일                  | 내용                          |
-| --------------------- | ----------------------------- |
-| `src/index.html`      | HTML 구조 (엔트리포인트)      |
-| `src/css/style.css`   | 전체 스타일시트               |
-| `src/js/core.js`      | 전역 상태, 스토리지, 유틸리티 |
-| `src/js/ui.js`        | 공통 UI, 테마, 마크다운       |
-| `src/js/data.js`      | 업무 CRUD, 동기화             |
-| `src/js/calendar.js`  | 대시보드, 캘린더, 일정        |
-| `src/js/kanban.js`    | 칸반 보드                     |
-| `src/js/ledger.js`    | 업무 대장, 필터링, 정렬       |
-| `src/js/inventory.js` | 인벤토리 시스템               |
-| `src/js/app.js`       | 초기화 및 내비게이션          |
+```
+taskflow/
+├── backend/
+│   ├── cmd/api/main.go
+│   ├── internal/
+│   │   ├── auth/          # JWT 발급·검증·미들웨어
+│   │   ├── handlers/      # Echo 라우트 핸들러
+│   │   ├── repository/    # DB 접근 계층
+│   │   └── service/       # 비즈니스 로직
+│   ├── migrations/        # SQL 마이그레이션 (순번 파일)
+│   └── go.mod
+│
+├── frontend/
+│   ├── src/
+│   │   ├── js/            # 기능 모듈
+│   │   ├── css/
+│   │   └── api/           # 백엔드 API 통신 레이어
+│   ├── vite.config.js
+│   └── package.json
+│
+├── src/                   # v1 브라우저 단독 버전 (보존)
+│   └── CLAUDE_V1.md       # v1 작업 시 규칙
+│
+└── docs/
+    ├── setup-guide/       # 환경 구성 가이드
+    └── coding-style-universal.md
+```
 
 ---
 
@@ -50,6 +70,8 @@
 | 아이디어 탐색, 대안 비교 | **Gemini** |
 | 코드 구현, 버그 수정, 리팩터링 | **Claude** |
 | `.claude/` 설정 관리 | **Claude** |
+| DB 마이그레이션 SQL 작성 | **Claude** |
+| Docker / Nginx / systemd 설정 | **Claude** |
 
 > 기획·설계가 필요하면 `gemini -p "..."` 로 직접 위임한다.
 > 구현 단계에서만 Claude가 코드를 건드린다.
@@ -58,55 +80,66 @@
 
 ## 핵심 규칙 (위반 시 즉시 중단)
 
-1. **단독 실행 보장** — 외부 서버·CDN·fetch·import 절대 금지. 파일 분리는 허용하되 브라우저에서 그대로 열리는 구조 유지
+1. **API 경계 준수** — 프론트엔드는 `/api/` 경유만. 직접 DB 접근 금지
 2. **파일 전체 읽기 금지** — grep으로 위치 먼저, 해당 범위만 Read (토큰 절약)
-3. **README.md 직접 수정 금지** — Gemini CLI 전담 영역. 수정 필요 시 사용자에게 Gemini 사용 요청
+3. **README.md 직접 수정 금지** — Gemini CLI 전담 영역
 4. **수정 전 보고** — 기능 추가·삭제 전 `[PLAN]`으로 승인 요청
-5. **수정 후 검증** — 반드시 `/verify` 실행
+5. **마이그레이션 필수** — DB 스키마 변경 시 `migrations/` SQL 파일 동반 작성. 기존 파일 수정 금지, 새 파일 추가
+6. **코딩 스타일 준수** — `.claude/rules/common/coding-style.md` 적용
+
+---
 
 ## 수정 표준 패턴
 
 ```bash
-# JS 수정
-grep -n "함수명\|키워드" src/js/*.js | head -10
-# 해당 파일의 범위만 Read → 수정 → /verify
+# Go 수정
+grep -n "키워드\|함수명" backend/internal/**/*.go | head -10
+# 해당 범위만 Read → 수정 → go build ./... 확인
 
-# CSS 수정
-grep -n "클래스\|키워드" src/css/style.css | head -10
+# SQL 마이그레이션
+# migrations/ 에 새 파일 추가 (NNN_description.sql 형식, 기존 파일 수정 금지)
+
+# JS/CSS 수정 (frontend/)
+grep -n "키워드\|함수명" frontend/src/js/*.js | head -10
 # 해당 범위만 Read → 수정 → /verify
 ```
 
 ---
 
-## 데이터 구조
+## DB 스키마 (주요 테이블)
 
-```js
-tasks[]         = { id, title, category, priority, status, tags[], startDate, dueDate, completedAt, assigneeId, memo }
-contacts[]      = { id, name, title, company, category, type('main'|'sub'), officePhone, mobilePhone, email, memo }
-recurringTasks[]   // 월간업무
-annualTasks[]      // 연간업무
+```sql
+users(id, email, password_hash, role, created_at)
+tasks(id, user_id, title, category, priority, status, tags, start_date, due_date, completed_at, memo)
+contacts(id, user_id, name, dept, phone, email, category, memo)
+schedules(id, user_id, title, date, start_time, end_time, color, memo)
 ```
 
-## 스토리지 키
+---
 
-```
-taskflow_v3 / taskflow_settings_v1 / taskflow_recurring_v1
-taskflow_annual_v1 / taskflow_contacts_v1 / taskflow_theme / taskflow_font
-```
+## 인증 규칙
+
+- **Access Token**: 메모리(변수) 보관, 15분 만료 — localStorage 저장 금지
+- **Refresh Token**: HttpOnly 쿠키, 14일 만료
+- API 요청마다 `Authorization: Bearer <access_token>` 헤더 포함
+- 401 응답 시 Refresh Token으로 자동 갱신 후 재시도
+
+---
 
 ## 알려진 주의사항
 
-- `populateModalDropdowns()` 스코프 밖 `t` 참조 → ReferenceError
-- colspan 현재 **11** — 컬럼 추가 시 함께 수정
-- `ep-tags-${t.id}` ID 중복 이력 — 수정 시 grep 확인
-- `_renderEventBars` rAF 밖 실행 → `layer.parentElement` null 가드 필요
-- `field-row` 2컬럼 grid — 3개 넣으면 auto-fit 변경 필요
+- `migrations/` 파일은 한 번 적용 후 수정 금지 — 변경 시 새 파일로 추가
+- Docker Compose 환경변수는 `.env` (`.gitignore` 등록 필수)
+- JWT Secret은 환경변수로만 관리, 코드에 하드코딩 금지
+- Go `context` 전파 필수 — DB 쿼리·외부 호출 모두 ctx 인자 포함
 
 ---
 
 ## 규칙 파일
 
-| 파일                              | 적용 범위                            |
-| --------------------------------- | ------------------------------------ |
-| `.claude/rules/ui-layout.md`      | CSS·HTML·JS UI 수정 시 레이아웃 기준 |
-| `.claude/rules/issue-workflow.md` | GitHub 이슈 처리 워크플로            |
+| 파일 | 적용 범위 |
+| ------------------------------------ | ----------------------------------------- |
+| `.claude/rules/ui-layout.md`         | CSS·HTML·JS UI 수정 시 레이아웃 기준      |
+| `.claude/rules/issue-workflow.md`    | GitHub 이슈 처리 워크플로                 |
+| `.claude/rules/common/coding-style.md` | 전 언어 네이밍·주석·포매팅 규칙         |
+| `.claude/rules/common/patterns.md`   | 불변성·오류처리·코드 품질 체크리스트     |
