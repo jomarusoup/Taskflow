@@ -76,6 +76,19 @@ v1-browser  ← v1 보존
 
 ---
 
+## docs 반영 규칙
+
+아래 변경이 발생하면 해당 문서를 반드시 갱신:
+
+| 변경 사항 | 갱신 대상 |
+|---|---|
+| 기능 추가·제거 | `README.md` |
+| API 엔드포인트 변경 | `docs/api/openapi.md` (Claude가 수정) |
+| 브랜치·협업 규칙 변경 | `CLAUDE.md` / `GEMINI.md` |
+| 설치·환경 변경 | `docs/setup-guide/` 해당 가이드 |
+
+**README.md 갱신 트리거:** 기능 추가·v2 진행·구조 변경 시 자동으로 갱신 제안
+
 ## 핸드오프 (Gemini → Claude 전환)
 
 설계·기획 완료 후 HANDOFF.md 갱신:
