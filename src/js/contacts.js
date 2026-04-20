@@ -218,14 +218,7 @@ function removeContactCat(e, cat) {
 }
 function setContactRole(cat, role) {
   contactCategoryRoles[cat] = role;
-  // 해당 카테고리 버튼 하이라이트 즉시 갱신
-  const rs = document.getElementById('cm-roles-section');
-  if (!rs) return;
-  rs.querySelectorAll(`button.role-btn`).forEach(btn => {
-    const parentCat = btn.closest('div[style]')?.querySelector('.tag')?.textContent;
-    if (parentCat !== cat) return;
-    btn.classList.toggle('role-btn-active', btn.textContent === (role === 'main' ? '정' : '부'));
-  });
+  renderContactCatMulti();
 }
 
 function closeContactModal() {
