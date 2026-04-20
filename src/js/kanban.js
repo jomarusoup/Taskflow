@@ -1,9 +1,18 @@
-/**
- * kanban.js - 칸반 보드 렌더링 및 드래그 앤 드롭
- */
+/******************************************************************************
+FILE NAME   : kanban.js
+DESCRIPTION : 칸반 보드 렌더링, 카드·컬럼 드래그 앤 드롭, 상태 변경 처리
+DATA        : 2026-04-20
+Modification: 2026-04-20
+******************************************************************************/
 
 let colDragKey = null; // 컬럼 드래그 전용
 
+/******************************************************************************
+FUNCTION    : renderKanban
+DESCRIPTION : 설정의 statuses 기준으로 칸반 컬럼과 카드를 전체 재렌더링.
+              카테고리 필터 적용 및 우선순위 정렬 포함
+RETURNED    : void
+******************************************************************************/
 function renderKanban(){
   const cf=document.getElementById('kanban-cat-filter')?.value || '';
   const COLS=settings.statuses.filter(s=>s.showInKanban!==false);
@@ -52,6 +61,12 @@ function renderKanban(){
   document.querySelectorAll('.kcard').forEach(c=>{c.addEventListener('dragstart',onDragStart);c.addEventListener('dragend',onDragEnd);});
 }
 
+/******************************************************************************
+FUNCTION    : renderKCard
+DESCRIPTION : 단일 업무 객체를 칸반 카드 HTML 문자열로 변환
+PARAMETERS  : t object - 업무 객체 (id, title, priority, tags, dueDate 사용)
+RETURNED    : string - 칸반 카드 HTML
+******************************************************************************/
 function renderKCard(t){
   const tags=t.tags.map(tg=>`<span class="tag">${esc(tg)}</span>`).join('');
   const due=t.dueDate?`<span class="kcard-due ${isOverdue(t)?'overdue':''}">${fmtDateShort(t.dueDate)}</span>`:'';
@@ -68,9 +83,10 @@ function renderKCard(t){
   </div>`;
 }
 
+/* confirmDelete: 삭제 확인 후 업무를 제거하고 전체 재렌더링 */
 function confirmDelete(id){if(confirm('삭제하시겠습니까?')){deleteTask(id);renderAll();toast('삭제됨');}}
 
-/* 카드 드래그 */
+/* 카드 드래그 이벤트 핸들러 */
 function onDragStart(e){
   if(colDragKey) return;
   dragSrcId=e.currentTarget.dataset.id;
@@ -85,6 +101,13 @@ function onDragOver(e,k){
   document.getElementById('cards-'+k)?.classList.add('drag-over');
 }
 function onDragLeave(e,k){document.getElementById('cards-'+k)?.classList.remove('drag-over');}
+/******************************************************************************
+FUNCTION    : onDrop
+DESCRIPTION : 카드 드롭 시 해당 컬럼의 상태로 업무를 변경
+PARAMETERS  : e DragEvent - 드롭 이벤트
+              k string    - 대상 컬럼 상태 키
+RETURNED    : void
+******************************************************************************/
 function onDrop(e,k){
   e.preventDefault();e.stopPropagation();
   document.getElementById('cards-'+k)?.classList.remove('drag-over');
@@ -94,7 +117,13 @@ function onDrop(e,k){
   dragSrcId=null;
 }
 
-/* 컬럼 드래그 */
+/******************************************************************************
+FUNCTION    : onColDragStart
+DESCRIPTION : 칸반 컬럼 드래그 시작. colDragKey에 현재 컬럼 키 저장
+PARAMETERS  : e   DragEvent - 드래그스타트 이벤트
+              key string    - 드래그 중인 컬럼 상태 키
+RETURNED    : void
+******************************************************************************/
 function onColDragStart(e, key){
   colDragKey = key;
   e.dataTransfer.effectAllowed = 'move';
@@ -120,6 +149,13 @@ function onColDragLeave(e, targetKey){
     document.getElementById('col-'+targetKey)?.classList.remove('col-drag-over');
   }
 }
+/******************************************************************************
+FUNCTION    : onColDrop
+DESCRIPTION : 컬럼 드롭 시 settings.statuses 배열 순서를 변경하고 저장
+PARAMETERS  : e         DragEvent - 드롭 이벤트
+              targetKey string    - 드롭 대상 컬럼 상태 키
+RETURNED    : void
+******************************************************************************/
 function onColDrop(e, targetKey){
   e.preventDefault(); e.stopPropagation();
   document.querySelectorAll('.kanban-col').forEach(c=>c.classList.remove('col-drag-over'));

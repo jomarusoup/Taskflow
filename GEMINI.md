@@ -11,6 +11,18 @@
 
 ---
 
+## 브랜치 전략
+
+```
+main        ← 배포 가능 상태 (직접 push 금지)
+develop     ← 통합 브랜치 (PR로만 merge)
+feature/*   ← 기능 단위 작업 (Claude 코딩 범위)
+v1-browser  ← v1 보존
+```
+
+- 기획·설계 완료 후 Claude에게 `feature/기능이름` 브랜치 이름 제안
+- PR 제목·설명 초안 작성은 Gemini 담당
+
 ## 역할 경계 (엄수)
 
 ### Gemini 담당 — 코드를 한 줄도 쓰지 않는다
