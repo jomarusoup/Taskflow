@@ -234,7 +234,7 @@ function invRenderBody(){
     const s=sts.find(x=>x.label===ev),bg=s?invAlpha(s.color,.18):'',bdr=s?`border-bottom:1.5px solid ${invAlpha(s.color,.5)};`:'';
     const opts=sts.map(x=>`<option${ev===x.label?' selected':''}>${esc(x.label)}</option>`).join('');
     const onChange=isBase?`invSetBase('${esc(rid)}','${esc(col.id)}',this.value)`:`invSetTabData('${esc(rid)}','${esc(tid)}','${esc(col.id)}',this.value)`;
-    return`<td ${extraAttrs} style="${extraStyle}background:${bg};${bdr}"><div class="inv-status-wrap"><select class="inv-status-sel" onchange="${onChange};invRenderBody()">${opts}</select></div></td>`;
+    return`<td ${extraAttrs} style="${extraStyle}${bdr}"><div class="inv-status-wrap"${bg?` style="background:${bg};"`:''}><select class="inv-status-sel" onchange="${onChange};invRenderBody()">${opts}</select></div></td>`;
   };
 
   let tbody='<tbody>';
