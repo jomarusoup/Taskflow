@@ -214,10 +214,10 @@ function invRenderBody(){
   cg+='</colgroup>';
 
   let head='<thead><tr>';
-  head+=`<th class="inv-fc inv-fh" data-fc-idx="0" style="left:0;width:${CHK}px;border-right:2px solid var(--border)">
+  head+=`<th class="inv-fc inv-fh" data-fc-idx="0" style="left:0;width:${CHK}px;">
     <div class="inv-th-inner" style="justify-content:center"><input type="checkbox" id="inv-chk-all" style="cursor:pointer"></div></th>`;
-  bc.forEach((c,i)=>{const w=invGetW(c.id),isL=i===bc.length-1,rBo=isL?`border-right:2px solid var(--border-h)`:``;
-    head+=`<th class="inv-fc inv-th-base" data-fc-idx="${i+1}" data-cid="${esc(c.id)}" data-scope="base" draggable="true" style="left:${lefts[i]}px;width:${w}px;${rBo}" oncontextmenu="invOpenColCtx('${esc(c.id)}','base',event);event.preventDefault()">
+  bc.forEach((c,i)=>{const w=invGetW(c.id),isL=i===bc.length-1,sepCls=isL?` inv-fc-sep`:``;
+    head+=`<th class="inv-fc inv-th-base${sepCls}" data-fc-idx="${i+1}" data-cid="${esc(c.id)}" data-scope="base" draggable="true" style="left:${lefts[i]}px;width:${w}px;" oncontextmenu="invOpenColCtx('${esc(c.id)}','base',event);event.preventDefault()">
       <div class="inv-th-inner">${dh}${mkFlt(c.id)}<span class="inv-th-label" ondblclick="invRenameCol('${esc(c.id)}')">${esc(c.name)}</span></div>
       <div class="inv-resize-h" data-cid="${esc(c.id)}"></div></th>`;
   });
@@ -241,15 +241,15 @@ function invRenderBody(){
   [...displayRows,...hiddenRows].forEach(row=>{
     const hidden=!dispIds.has(row.id),sel=invSt.selected.has(row.id),rh=invSt.rowHeights[row.id];
     tbody+=`<tr data-rid="${esc(row.id)}" style="${rh?`height:${rh}px`:''}${hidden?';display:none':''}">`;
-    tbody+=`<td class="inv-fc" data-fc-idx="0" style="left:0;width:${CHK}px;border-right:2px solid var(--border)">
+    tbody+=`<td class="inv-fc" data-fc-idx="0" style="left:0;width:${CHK}px;">
       <div class="inv-row-drag-cell" data-rid="${esc(row.id)}" style="${rh?`height:${rh}px`:''}">
         <span data-dh="row" style="cursor:grab;color:var(--text3);font-size:11px;user-select:none">⠿</span>
         <input type="checkbox" class="inv-rchk" data-rid="${esc(row.id)}" ${sel?'checked':''} style="cursor:pointer">
         <div class="inv-row-resize-h" data-rid="${esc(row.id)}"></div>
       </div></td>`;
-    bc.forEach((c,i)=>{const val=row.base[c.id]||'',isL=i===bc.length-1,rBo=isL?`border-right:2px solid var(--border-h)`:``; const st=`left:${lefts[i]}px;${rBo};`;
-      if(c.type==='status'){tbody+=mkStTd(c,val,row.id,'',true,st,`class="inv-fc" data-fc-idx="${i+1}"`);}
-      else{tbody+=`<td class="inv-fc" data-fc-idx="${i+1}" style="${st}"><div class="inv-cell-wrap"><textarea class="inv-cell-ta" rows="${Math.max(1,val.split('\n').length)}" wrap="off" data-cid="${esc(c.id)}" oninput="_invCellInput(this)" onchange="invSetBase('${esc(row.id)}','${esc(c.id)}',this.value)" onblur="invAutoFitCol('${esc(c.id)}')">${esc(val)}</textarea></div></td>`;}
+    bc.forEach((c,i)=>{const val=row.base[c.id]||'',isL=i===bc.length-1,sepCls=isL?` inv-fc-sep`:``; const st=`left:${lefts[i]}px;`;
+      if(c.type==='status'){tbody+=mkStTd(c,val,row.id,'',true,st,`class="inv-fc${sepCls}" data-fc-idx="${i+1}"`);}
+      else{tbody+=`<td class="inv-fc${sepCls}" data-fc-idx="${i+1}" style="${st}"><div class="inv-cell-wrap"><textarea class="inv-cell-ta" rows="${Math.max(1,val.split('\n').length)}" wrap="off" data-cid="${esc(c.id)}" oninput="_invCellInput(this)" onchange="invSetBase('${esc(row.id)}','${esc(c.id)}',this.value)" onblur="invAutoFitCol('${esc(c.id)}')">${esc(val)}</textarea></div></td>`;}
     });
     const rd=(row.data&&row.data[tab.id])||{};
     tc.forEach(c=>{const val=rd[c.id]||'',lBo=c.id===ftc?`border-left:2px solid ${tabColor};`:'';const st=`${lBo}border-right:1px solid ${tabBo};`;
