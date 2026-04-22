@@ -1,7 +1,16 @@
-/**
- * app.js - 어플리케이션 초기화, 내비게이션, 고수준 렌더링 오케스트레이션
- */
+/******************************************************************************
+FILE NAME   : app.js
+DESCRIPTION : 어플리케이션 초기화, 내비게이션, 고수준 렌더링 오케스트레이션
+DATA        : 2026-04-20
+Modification: 2026-04-20
+******************************************************************************/
 
+/******************************************************************************
+FUNCTION    : renderAll
+DESCRIPTION : 모든 뷰(대시보드, 칸반, 업무대장, 배지, 필터)를 일괄 재렌더링.
+              데이터 변경 후 UI 동기화 시 호출
+RETURNED    : void
+******************************************************************************/
 function renderAll() {
   renderDashboard();
   renderKanban();
@@ -10,6 +19,11 @@ function renderAll() {
   updateFilterDropdowns();
 }
 
+/******************************************************************************
+FUNCTION    : updateBadges
+DESCRIPTION : 사이드바 내비게이션 배지 카운트를 현재 데이터 기준으로 갱신
+RETURNED    : void
+******************************************************************************/
 function updateBadges() {
   const badgeDash = document.getElementById('badge-dashboard');
   const badgeKanban = document.getElementById('badge-kanban');
@@ -22,6 +36,11 @@ function updateBadges() {
   if (badgeContacts) badgeContacts.textContent = contacts.length;
 }
 
+/******************************************************************************
+FUNCTION    : updateFilterDropdowns
+DESCRIPTION : 칸반 카테고리 필터 드롭다운 및 멀티셀렉트 라벨을 현재 데이터로 갱신
+RETURNED    : void
+******************************************************************************/
 function updateFilterDropdowns() {
   // Kanban cat filter
   const kanbanCatFilter = document.getElementById('kanban-cat-filter');
@@ -36,6 +55,12 @@ function updateFilterDropdowns() {
 }
 
 // ── NAV ──────────────────────────────────────────────
+/******************************************************************************
+FUNCTION    : switchView
+DESCRIPTION : 지정한 이름의 뷰를 활성화하고 해당 뷰의 렌더링 함수를 호출
+PARAMETERS  : name string - 뷰 이름 (dashboard|kanban|ledger|contacts|inventory|settings|backup)
+RETURNED    : void
+******************************************************************************/
 function switchView(name){
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const targetView = document.getElementById('view-' + name);

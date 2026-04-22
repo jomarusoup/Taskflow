@@ -136,6 +136,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14
 .cal-bar-row{position:absolute;left:0;right:0;height:18px;pointer-events:auto;}
 .cal-bar{position:absolute;top:0;height:16px;border-radius:3px;font-size:10px;font-weight:500;font-family:var(--sans);display:flex;align-items:center;padding:0 6px;white-space:nowrap;overflow:hidden;cursor:pointer;transition:filter .15s;}
 .cal-bar:hover{filter:brightness(1.15);}
+.cal-bar-sch{font-weight:600;border:none;}
 .cal-bar-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 /* 단일 날짜 칩 (시작=마감 또는 날짜 하나만) */
 .cal-dot-chip{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:500;font-family:var(--sans);padding:1px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;position:absolute;left:2px;right:2px;}
@@ -597,19 +598,21 @@ input[type="date"].field-input{appearance:none;-webkit-appearance:none;}
 .inv-memo-hd{display:flex;align-items:center;padding:6px 14px;background:var(--s2);cursor:pointer;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);user-select:none;}
 .inv-memo-hd:hover{color:var(--text);}
 .inv-memo-body{padding:8px 14px;border-bottom:1px solid var(--border);}
-.inv-memo-ta{width:100%;min-height:52px;max-height:120px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);font-family:var(--sans);font-size:12px;color:var(--text);padding:6px 10px;resize:vertical;outline:none;line-height:1.6;}
+.inv-memo-ta{width:100%;min-height:52px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);font-family:var(--sans);font-size:12px;color:var(--text);padding:6px 10px;resize:none;overflow:hidden;outline:none;line-height:1.6;}
 .inv-memo-ta:focus{border-color:var(--border-h);}
 .inv-table-wrap{flex:1;overflow:auto;}
 .inv-table{border-collapse:collapse;table-layout:fixed;width:max-content;}
 .inv-table th,.inv-table td{padding:0;border-bottom:1px solid var(--border);border-right:1px solid var(--border);color:var(--text);vertical-align:top;overflow:hidden;white-space:nowrap;}
 .inv-table td:last-child,.inv-table th:last-child{border-right:none;}
 .inv-table th{font-weight:600;}
-.inv-fc{position:sticky;z-index:3;background:var(--s1);box-shadow:3px 0 5px -1px rgba(0,0,0,0.2);}
+.inv-fc{position:sticky;z-index:3;background:var(--s1);box-shadow:inset -1px 0 0 var(--border),3px 0 5px -1px rgba(0,0,0,0.2);}
+.inv-fc-sep{box-shadow:inset -2px 0 0 var(--border-h),3px 0 5px -1px rgba(0,0,0,0.2);}
 .inv-fh{position:sticky;top:0;z-index:5;background:var(--s1)!important;}
 .inv-th-base{position:sticky;top:0;z-index:4;background:var(--s1);}
 .inv-th-tab{position:sticky;top:0;z-index:2;}
 .inv-table tr:hover td{background:var(--s2);}
-.inv-table tr:hover .inv-fc{background:var(--s2)!important;box-shadow:3px 0 5px -1px rgba(0,0,0,0.2);}
+.inv-table tr:hover .inv-fc{background:var(--s2)!important;box-shadow:inset -1px 0 0 var(--border),3px 0 5px -1px rgba(0,0,0,0.2);}
+.inv-table tr:hover .inv-fc-sep{background:var(--s2)!important;box-shadow:inset -2px 0 0 var(--border-h),3px 0 5px -1px rgba(0,0,0,0.2);}
 .inv-th-inner{display:flex;align-items:center;padding:7px 8px;gap:4px;position:relative;height:100%;}
 .inv-th-drag{cursor:grab;font-size:11px;color:var(--text3);padding:0 2px;user-select:none;flex-shrink:0;line-height:1;}
 .inv-th-drag:hover{color:var(--text2);}
@@ -623,7 +626,7 @@ input[type="date"].field-input{appearance:none;-webkit-appearance:none;}
 .inv-cell-wrap{padding:5px 8px;min-height:32px;}
 .inv-cell-ta{border:none;background:transparent;font-family:var(--sans);font-size:13px;color:var(--text);width:100%;outline:none;resize:none;overflow:hidden;display:block;line-height:1.5;min-height:20px;}
 .inv-cell-ta:focus{background:var(--s3);border-radius:3px;padding:1px 3px;margin:-1px;width:calc(100% + 2px);}
-.inv-status-wrap{padding:5px 8px;min-height:32px;display:flex;align-items:center;}
+.inv-status-wrap{padding:5px 8px;min-height:32px;display:flex;align-items:center;height:100%;}
 .inv-status-sel{border:none;background:transparent;font-family:var(--sans);font-size:13px;color:var(--text);width:100%;outline:none;cursor:pointer;padding:0;font-weight:500;}
 .inv-row-drag-cell{cursor:grab;color:var(--text3);font-size:11px;user-select:none;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:4px;padding:4px 6px;position:relative;}
 .inv-row-drag-cell:hover{color:var(--text2);}

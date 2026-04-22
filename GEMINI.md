@@ -11,6 +11,18 @@
 
 ---
 
+## 브랜치 전략
+
+```
+main        ← 배포 가능 상태 (직접 push 금지)
+develop     ← 통합 브랜치 (PR로만 merge)
+feature/*   ← 기능 단위 작업 (Claude 코딩 범위)
+v1-browser  ← v1 보존
+```
+
+- 기획·설계 완료 후 Claude에게 `feature/기능이름` 브랜치 이름 제안
+- PR 제목·설명 초안 작성은 Gemini 담당
+
 ## 역할 경계 (엄수)
 
 ### Gemini 담당 — 코드를 한 줄도 쓰지 않는다
@@ -63,6 +75,19 @@
 소스 구조: `backend/` `frontend/` `src/`(v1 보존) `docs/`
 
 ---
+
+## docs 반영 규칙
+
+아래 변경이 발생하면 해당 문서를 반드시 갱신:
+
+| 변경 사항 | 갱신 대상 |
+|---|---|
+| 기능 추가·제거 | `README.md` |
+| API 엔드포인트 변경 | `docs/api/openapi.md` (Claude가 수정) |
+| 브랜치·협업 규칙 변경 | `CLAUDE.md` / `GEMINI.md` |
+| 설치·환경 변경 | `docs/setup-guide/` 해당 가이드 |
+
+**README.md 갱신 트리거:** 기능 추가·v2 진행·구조 변경 시 자동으로 갱신 제안
 
 ## 핸드오프 (Gemini → Claude 전환)
 

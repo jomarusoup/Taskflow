@@ -78,6 +78,33 @@ taskflow/
 
 ---
 
+## 브랜치 전략
+
+```
+main        ← 배포 가능 상태만 (직접 push 금지)
+develop     ← 통합 브랜치 (PR로만 merge)
+feature/*   ← 기능 단위 작업 브랜치 (AI 작업 범위)
+v1-browser  ← v1 보존 (src/ 버그픽스만)
+```
+
+**AI 작업 규칙:**
+- 모든 코드 수정은 `feature/기능이름` 브랜치에서 진행
+- 직접 `main` / `develop` push 금지 — PR 생성 후 개발자 리뷰
+- 단, `.claude/` `.gemini/` `CLAUDE.md` `GEMINI.md` 설정 변경은 `main` 직접 push 허용
+- v1 버그픽스는 `v1-browser` 브랜치에서 작업 후 cherry-pick
+
+## AI 세션 분리
+
+컨텍스트 오염 방지를 위해 백엔드·프론트엔드 세션을 분리한다.
+
+| 세션 | 작업 범위 | 참조 규칙 |
+|---|---|---|
+| **백엔드 세션** | `backend/` 전용 | `backend/CLAUDE.md` |
+| **프론트엔드 세션** | `frontend/` + `src/` | `frontend/CLAUDE.md` |
+| **공통** | `.claude/` `docs/` `CLAUDE.md` | 이 파일 |
+
+**API 경계**: `docs/api/` 의 명세가 두 세션의 유일한 접점. 백엔드는 명세대로 구현, 프론트엔드는 명세대로 호출.
+
 ## Gemini 위임 트리거 — 즉시 전환 요청
 
 아래 요청이 오면 코드를 건드리지 말고 사용자에게 전달:
@@ -114,6 +141,10 @@ taskflow/
 5. **마이그레이션 필수** — DB 스키마 변경 시 `migrations/` SQL 파일 동반 작성. 기존 파일 수정 금지, 새 파일 추가
 6. **코딩 스타일 준수** — `.claude/rules/common/coding-style.md` 적용
 7. **수정 완료 시 자동 git push** — 별도 요청 없이 수정 → `/verify` → `git push` 순서로 진행
+8. **docs 반영** — 아래 변경 시 해당 문서를 함께 갱신
+   - API 엔드포인트 추가·변경 → `docs/api/openapi.md`
+   - 브랜치·세션 규칙 변경 → `CLAUDE.md` / `GEMINI.md`
+   - README 갱신 필요 시 → 사용자에게 Gemini 실행 요청 (직접 수정 금지)
 
 ---
 
