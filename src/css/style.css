@@ -602,7 +602,7 @@ input[type="date"].field-input{appearance:none;-webkit-appearance:none;}
 .inv-memo-hd{display:flex;align-items:center;padding:6px 14px;background:var(--s2);cursor:pointer;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);user-select:none;}
 .inv-memo-hd:hover{color:var(--text);}
 .inv-memo-body{padding:8px 14px;border-bottom:1px solid var(--border);}
-.inv-memo-ta{width:100%;min-height:52px;max-height:120px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);font-family:var(--sans);font-size:12px;color:var(--text);padding:6px 10px;resize:vertical;outline:none;line-height:1.6;}
+.inv-memo-ta{width:100%;min-height:52px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);font-family:var(--sans);font-size:12px;color:var(--text);padding:6px 10px;resize:none;overflow:hidden;outline:none;line-height:1.6;}
 .inv-memo-ta:focus{border-color:var(--border-h);}
 .inv-table-wrap{flex:1;overflow:auto;}
 .inv-table{border-collapse:collapse;table-layout:fixed;width:max-content;}
@@ -628,7 +628,7 @@ input[type="date"].field-input{appearance:none;-webkit-appearance:none;}
 .inv-cell-wrap{padding:5px 8px;min-height:32px;}
 .inv-cell-ta{border:none;background:transparent;font-family:var(--sans);font-size:13px;color:var(--text);width:100%;outline:none;resize:none;overflow:hidden;display:block;line-height:1.5;min-height:20px;}
 .inv-cell-ta:focus{background:var(--s3);border-radius:3px;padding:1px 3px;margin:-1px;width:calc(100% + 2px);}
-.inv-status-wrap{padding:5px 8px;min-height:32px;display:flex;align-items:center;}
+.inv-status-wrap{padding:5px 8px;min-height:32px;display:flex;align-items:center;height:100%;}
 .inv-status-sel{border:none;background:transparent;font-family:var(--sans);font-size:13px;color:var(--text);width:100%;outline:none;cursor:pointer;padding:0;font-weight:500;}
 .inv-row-drag-cell{cursor:grab;color:var(--text3);font-size:11px;user-select:none;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:4px;padding:4px 6px;position:relative;}
 .inv-row-drag-cell:hover{color:var(--text2);}
