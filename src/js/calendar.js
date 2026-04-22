@@ -184,13 +184,8 @@ function renderCalendar() {
     const isToday=ds===td, isOther=moff!==0, isSel=ds===calSelectedDate;
     const dow=i%7;
     cellDates.push(ds);
-    const daySchs = schedules.filter(s=>s.date===ds);
-    const schChips = daySchs.length ? `<div class="cal-sch-chips">${
-      daySchs.slice(0,3).map(s=>`<div class="cal-sch-chip" style="border-left:2px solid ${s.color};background:${s.color}22" onclick="event.stopPropagation();openSchModal('${ds}',${JSON.stringify(s).replace(/"/g,'&quot;')})"><span class="cal-sch-chip-title">${esc(s.title)}</span></div>`).join('')
-    }${daySchs.length>3?`<div class="cal-sch-chip-more">+${daySchs.length-3}</div>`:''}</div>` : '';
     cellHtml+=`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}${isSel?' selected':''}${dow===0?' sunday':''}${dow===6?' saturday':''}" onclick="openCalDetail('${ds}')">
       <div class="cal-cell-hd"><div class="cal-day-num">${dayNum}</div><button class="cal-cell-add" onclick="event.stopPropagation();openSchModal('${ds}')" title="일정 추가">＋</button></div>
-      ${schChips}
     </div>`;
   }
   const grid = document.getElementById('cal-grid');
@@ -241,11 +236,16 @@ function _renderEventBars(cellDates, total, firstDay, evMap, _retry) {
     return colorMap[c] || c;
   }
 
-  // 바 수집 — evMap 대신 tasks 직접 순회 (월 경계 업무도 포함)
+  // 바 수집 — 일정 먼저(최상단 lane 보장), 그 다음 업무
   const firstDate = cellDates[0];
   const lastDate  = cellDates[cellDates.length - 1];
   const hiddenStatuses = new Set(settings.statuses.filter(s=>s.showInCalendar===false).map(s=>s.key));
   const bars = [];
+  // 일정(schedule) - 항상 먼저 수집해 lane 0부터 배정
+  schedules.forEach(s => {
+    if (!s.date || s.date < firstDate || s.date > lastDate) return;
+    bars.push({ sch:s, type:'schedule', start:s.date, end:s.date });
+  });
   tasks.forEach(t => {
     if (t.status === 'archived') return;
     if (hiddenStatuses.has(t.status)) return;
@@ -273,6 +273,15 @@ function _renderEventBars(cellDates, total, firstDay, evMap, _retry) {
   const allCells = grid.querySelectorAll('.cal-cell');
 
   bars.forEach(bar => {
+    if (bar.type === 'schedule') {
+      const s = bar.sch;
+      const sIdx = dateToIdx[bar.start];
+      if (sIdx === undefined) return;
+      const row = Math.floor(sIdx / 7);
+      const lane = assignLane(row, sIdx, sIdx);
+      tempBars.push({ sch:s, color:s.color||'#6aabdb', type:'schedule', si:sIdx, ei:sIdx, lane });
+      return;
+    }
     const t = bar.task;
     const color = resolveColor(t);
     const sIdx = dateToIdx[bar.start];
@@ -325,6 +334,19 @@ function _renderEventBars(cellDates, total, firstDay, evMap, _retry) {
     const rS  = cellS.getBoundingClientRect();
     const rE  = cellE.getBoundingClientRect();
     const top = (rS.top - lRect.top) + BAR_TOP_OFFSET + lane * (BAR_H + BAR_GAP);
+
+    if (type === 'schedule') {
+      const s = b.sch;
+      const left  = rS.left - lRect.left + 2;
+      const width = rS.width - 4;
+      const txt   = esc(s.title.slice(0, Math.max(4, Math.floor(width/7))));
+      const timeStr = s.startTime ? ` ${s.startTime}` : '';
+      barsHtml += `<div class="cal-bar cal-bar-sch" style="left:${left}px;top:${top}px;width:${width}px;background:${color};color:#fff;"
+        onclick="event.stopPropagation();openSchModal('${esc(s.date)}',${JSON.stringify(s).replace(/"/g,'&quot;')})"
+        title="${esc(s.title)}${timeStr}">
+        <span class="cal-bar-text">◼ ${txt}${timeStr}</span></div>`;
+      return;
+    }
 
     if (type === 'single') {
       const left  = rS.left - lRect.left + 2;
