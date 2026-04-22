@@ -263,7 +263,7 @@ function invRenderBody(){
 
   const memoHtml=`<div class="inv-memo-wrap">
     <div class="inv-memo-hd" onclick="const b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none'">📝 메모 <span style="margin-left:auto;font-size:10px">▾</span></div>
-    <div class="inv-memo-body"><textarea class="inv-memo-ta" placeholder="탭 메모..." oninput="invSaveMemo('${esc(tab.id)}',this.value)">${esc(memoVal)}</textarea></div></div>`;
+    <div class="inv-memo-body"><textarea class="inv-memo-ta" placeholder="탭 메모..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';invSaveMemo('${esc(tab.id)}',this.value)">${esc(memoVal)}</textarea></div></div>`;
   const hidBarHtml=hidCols.length?`<div class="inv-hidden-bar"><span class="inv-hidden-label">숨겨진 열:</span>${hidCols.map(c=>`<button class="inv-show-col-btn" onclick="invShowCol('${esc(c.id)}')">${esc(c.name)} ▶</button>`).join('')}</div>`:'';
   const tableHtml=(bc.length+tc.length)===0?`<div class="inv-empty">＋ 공통 열 또는 탭 열을 추가하세요.</div>`:
     `<div class="inv-table-wrap"><table class="inv-table" id="inv-tbl">${cg}${head}${tbody}</table></div>`;
@@ -271,6 +271,7 @@ function invRenderBody(){
   bodyEl.innerHTML=`${memoHtml}${hidBarHtml}${tableHtml}`;
   requestAnimationFrame(()=>{
     bodyEl.querySelectorAll('.inv-cell-ta').forEach(ta=>{ta.rows=Math.max(1,ta.value.split('\n').length);});
+    const memoTa=bodyEl.querySelector('.inv-memo-ta');if(memoTa){memoTa.style.height='auto';memoTa.style.height=memoTa.scrollHeight+'px';}
     _invInitColResize();_invInitRowResize();_invInitColDrag();_invInitRowDrag();
     const tbl=document.getElementById('inv-tbl');
     /* ── sticky left 실측 보정 ── */
