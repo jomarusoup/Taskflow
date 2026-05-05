@@ -1,7 +1,6 @@
 # TASKFLOW Frontend — Claude 세션 규칙
 
-> 이 세션은 `frontend/` + `src/` 디렉토리만 다룬다.
-> 백엔드(`backend/`)는 절대 수정하지 않는다.
+이 세션은 `frontend/` + `src/` 디렉터리만 다룬다. 백엔드(`backend/`)는 절대 수정하지 않는다.
 
 ## 작업 범위
 
@@ -25,7 +24,5 @@
 
 ## JS/CSS 코딩 규칙
 
-- `.claude/rules/common/coding-style.md` 준수
-- `.claude/rules/ui-layout.md` UI 수정 시 필수 참조
 - 모든 함수에 함수 주석 헤더 작성
 - `var` 사용 금지, `const` / `let` 사용

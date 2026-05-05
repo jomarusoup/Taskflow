@@ -1,6 +1,4 @@
-# TASKFLOW — Claude Code 지시서 (v2)
-
-> v1(브라우저 단독) 규칙은 `src/CLAUDE_V1.md` 참조.
+# TASKFLOW — Claude Code 프로젝트 지시서
 
 ## 세션 시작 시 필수 순서
 
@@ -10,22 +8,21 @@
    - 불일치 → `git log --oneline -5`로 최근 작업 파악 후 시작
 3. 이 파일 확인 → 작업 시작
 
-> HANDOFF.md는 git post-commit 훅으로 커밋마다 자동 갱신됨.
-> 불일치 시 git log가 진실의 원본.
+HANDOFF.md는 git post-commit 훅으로 커밋마다 자동 갱신됨. 불일치 시 git log가 진실의 원본.
 
 ---
 
 ## 프로젝트 개요
 
-| 항목       | 내용                               |
-| ---------- | ---------------------------------- |
-| 프론트엔드 | Vite 5 + Vanilla JS (ES Modules)   |
-| 백엔드     | Go 1.22 + Echo v4                  |
-| DB         | PostgreSQL 16                      |
-| 인증       | JWT (Access 15분 / Refresh 14일)   |
-| 컨테이너   | Docker + Docker Compose            |
-| 프록시     | Nginx                              |
-| 배포       | 단일 서버, systemd                 |
+| 항목       | 내용                             |
+| ---------- | -------------------------------- |
+| 프론트엔드 | Vite 5 + Vanilla JS (ES Modules) |
+| 백엔드     | Go 1.22 + Echo v4                |
+| DB         | PostgreSQL 16                    |
+| 인증       | JWT (Access 15분 / Refresh 14일) |
+| 컨테이너   | Docker + Docker Compose          |
+| 프록시     | Nginx                            |
+| 배포       | 단일 서버, systemd               |
 
 ---
 
@@ -61,23 +58,6 @@ taskflow/
 
 ---
 
-## AI 역할 분담
-
-| 작업 | 담당 |
-|---|---|
-| 기능 기획, 요구사항 정리, 설계 문서 | **Gemini** (`gemini` CLI 사용) |
-| README.md 갱신 | **Gemini** (전담) |
-| 아이디어 탐색, 대안 비교 | **Gemini** |
-| 코드 구현, 버그 수정, 리팩터링 | **Claude** |
-| `.claude/` 설정 관리 | **Claude** |
-| DB 마이그레이션 SQL 작성 | **Claude** |
-| Docker / Nginx / systemd 설정 | **Claude** |
-
-> 기획·설계가 필요하면 `gemini -p "..."` 로 직접 위임한다.
-> 구현 단계에서만 Claude가 코드를 건드린다.
-
----
-
 ## 브랜치 전략
 
 ```
@@ -90,8 +70,10 @@ v1-browser  ← v1 보존 (src/ 버그픽스만)
 **AI 작업 규칙:**
 - 모든 코드 수정은 `feature/기능이름` 브랜치에서 진행
 - 직접 `main` / `develop` push 금지 — PR 생성 후 개발자 리뷰
-- 단, `.claude/` `.gemini/` `CLAUDE.md` `GEMINI.md` 설정 변경은 `main` 직접 push 허용
+- 단, `~/.claude/` `.gemini/` `CLAUDE.md` `GEMINI.md` 설정 변경은 `main` 직접 push 허용
 - v1 버그픽스는 `v1-browser` 브랜치에서 작업 후 cherry-pick
+
+---
 
 ## AI 세션 분리
 
@@ -101,47 +83,17 @@ v1-browser  ← v1 보존 (src/ 버그픽스만)
 |---|---|---|
 | **백엔드 세션** | `backend/` 전용 | `backend/CLAUDE.md` |
 | **프론트엔드 세션** | `frontend/` + `src/` | `frontend/CLAUDE.md` |
-| **공통** | `.claude/` `docs/` `CLAUDE.md` | 이 파일 |
+| **공통** | `~/.claude/` `docs/` `CLAUDE.md` | 이 파일 + `~/.claude/CLAUDE.md` |
 
 **API 경계**: `docs/api/` 의 명세가 두 세션의 유일한 접점. 백엔드는 명세대로 구현, 프론트엔드는 명세대로 호출.
-
-## Gemini 위임 트리거 — 즉시 전환 요청
-
-아래 요청이 오면 코드를 건드리지 말고 사용자에게 전달:
-
-```
-이 작업은 Gemini 담당입니다.
-터미널에서 실행: gemini -p "..."
-```
-
-| 트리거 | 전환 이유 |
-|---|---|
-| 기능 기획·요구사항 정리 요청 | Gemini 전담 |
-| 설계 문서·아키텍처 설계 요청 | Gemini 전담 |
-| README.md 수정 요청 | Gemini 전담 |
-| 이슈 방향·우선순위 결정 요청 | Gemini 전담 |
-| 브레인스토밍·대안 비교 요청 | Gemini 전담 |
-
----
-
-## 토큰 절약 원칙
-
-- 파일 전체 읽기 금지 — grep 먼저, 필요 범위만 Read
-- Gemini가 설계한 내용을 재분석하지 않고 바로 구현
-- Gemini 백그라운드 실행 중 동일 작업 선제 수행 금지
 
 ---
 
 ## 핵심 규칙 (위반 시 즉시 중단)
 
 1. **API 경계 준수** — 프론트엔드는 `/api/` 경유만. 직접 DB 접근 금지
-2. **파일 전체 읽기 금지** — grep으로 위치 먼저, 해당 범위만 Read (토큰 절약)
-3. **README.md 직접 수정 금지** — Gemini CLI 전담 영역
-4. **수정 전 보고** — 기능 추가·삭제 전 `[PLAN]`으로 승인 요청
-5. **마이그레이션 필수** — DB 스키마 변경 시 `migrations/` SQL 파일 동반 작성. 기존 파일 수정 금지, 새 파일 추가
-6. **코딩 스타일 준수** — `.claude/rules/common/coding-style.md` 적용
-7. **수정 완료 시 자동 git push** — 별도 요청 없이 수정 → `/verify` → `git push` 순서로 진행
-8. **docs 반영** — 아래 변경 시 해당 문서를 함께 갱신
+2. **마이그레이션 필수** — DB 스키마 변경 시 `migrations/` SQL 파일 동반 작성. 기존 파일 수정 금지, 새 파일 추가
+3. **docs 반영** — 아래 변경 시 해당 문서를 함께 갱신
    - API 엔드포인트 추가·변경 → `docs/api/openapi.md`
    - 브랜치·세션 규칙 변경 → `CLAUDE.md` / `GEMINI.md`
    - README 갱신 필요 시 → 사용자에게 Gemini 실행 요청 (직접 수정 금지)
@@ -191,14 +143,3 @@ schedules(id, user_id, title, date, start_time, end_time, color, memo)
 - Docker Compose 환경변수는 `.env` (`.gitignore` 등록 필수)
 - JWT Secret은 환경변수로만 관리, 코드에 하드코딩 금지
 - Go `context` 전파 필수 — DB 쿼리·외부 호출 모두 ctx 인자 포함
-
----
-
-## 규칙 파일
-
-| 파일 | 적용 범위 |
-| ------------------------------------ | ----------------------------------------- |
-| `.claude/rules/ui-layout.md`         | CSS·HTML·JS UI 수정 시 레이아웃 기준      |
-| `.claude/rules/issue-workflow.md`    | GitHub 이슈 처리 워크플로                 |
-| `.claude/rules/common/coding-style.md` | 전 언어 네이밍·주석·포매팅 규칙         |
-| `.claude/rules/common/patterns.md`   | 불변성·오류처리·코드 품질 체크리스트     |
