@@ -145,7 +145,7 @@ function openContactModal(id = null) {
       </div>
       <div class="modal-foot">
         <button class="btn btn-ghost" onclick="closeContactModal()">취소</button>
-        ${c ? `<button class="btn btn-danger btn-sm" onclick="deleteContact('${esc(c.id)}');closeContactModal()">삭제</button>` : ''}
+        ${c ? `<button class="btn btn-danger btn-sm" onclick="if(deleteContact('${esc(c.id)}'))closeContactModal()">삭제</button>` : ''}
         <button class="btn btn-primary" onclick="saveContact()">저장</button>
       </div>
     </div>`;
@@ -166,16 +166,26 @@ function renderContactCatMulti() {
   selectedContactCats.forEach(cat => {
     const pill = document.createElement('div');
     pill.className = 'tag-pill';
-    pill.innerHTML = `${esc(cat)} <span class="tag-pill-x" onclick="removeContactCat(event,'${esc(cat)}')">✕</span>`;
+    pill.textContent = cat + ' ';
+    const x = document.createElement('span');
+    x.className = 'tag-pill-x';
+    x.textContent = '✕';
+    x.addEventListener('click', e => removeContactCat(e, cat));
+    pill.appendChild(x);
     sel.insertBefore(pill, ph);
   });
   const dd = document.getElementById('cm-cat-dd');
-  if (dd) dd.innerHTML = settings.categories.map(cat => {
-    const isSel = selectedContactCats.includes(cat);
-    return `<div class="tag-option ${isSel?'selected':''}" onclick="toggleContactCat(event,'${esc(cat)}')">
-      <div class="tag-check">${isSel?'✓':''}</div>${esc(cat)}
-    </div>`;
-  }).join('') || '<div style="padding:8px 12px;font-size:12px;color:var(--text3)">카테고리 없음</div>';
+  if (dd) {
+    dd.innerHTML = settings.categories.map(cat => {
+      const isSel = selectedContactCats.includes(cat);
+      return `<div class="tag-option ${isSel?'selected':''}" data-cat="${esc(cat)}">
+        <div class="tag-check">${isSel?'✓':''}</div>${esc(cat)}
+      </div>`;
+    }).join('') || '<div style="padding:8px 12px;font-size:12px;color:var(--text3)">카테고리 없음</div>';
+    dd.querySelectorAll('.tag-option').forEach(el => {
+      el.addEventListener('click', e => toggleContactCat(e, el.dataset.cat));
+    });
+  }
   // 카테고리별 정/부 섹션 렌더
   const rs = document.getElementById('cm-roles-section');
   if (!rs) return;
@@ -186,11 +196,14 @@ function renderContactCatMulti() {
       return `<div style="display:flex;align-items:center;gap:8px;font-size:12px">
         <span class="tag" style="min-width:60px;text-align:center">${esc(cat)}</span>
         <div style="display:flex;gap:4px">
-          <button type="button" class="role-btn${role==='main'?' role-btn-active':''}" onclick="setContactRole('${esc(cat)}','main')">정</button>
-          <button type="button" class="role-btn${role==='sub'?' role-btn-active':''}" onclick="setContactRole('${esc(cat)}','sub')">부</button>
+          <button type="button" class="role-btn${role==='main'?' role-btn-active':''}" data-cat="${esc(cat)}" data-role="main">정</button>
+          <button type="button" class="role-btn${role==='sub'?' role-btn-active':''}" data-cat="${esc(cat)}" data-role="sub">부</button>
         </div>
       </div>`;
     }).join('') + `</div>`;
+  rs.querySelectorAll('.role-btn').forEach(btn => {
+    btn.addEventListener('click', () => setContactRole(btn.dataset.cat, btn.dataset.role));
+  });
 }
 function toggleContactCatDd(e) {
   const dd = document.getElementById('cm-cat-dd');
@@ -257,14 +270,21 @@ function saveContact() {
   if (document.getElementById('assignee-multi')) renderAssigneeMulti();
 }
 
+/******************************************************************************
+FUNCTION    : deleteContact
+DESCRIPTION : 연락처 삭제(확인창 포함). 연결된 업무의 담당자에서도 제거
+PARAMETERS  : string id - 연락처 ID
+RETURNED    : boolean - 실제 삭제 여부 (confirm 취소 시 false)
+******************************************************************************/
 function deleteContact(id) {
-  if (!confirm('연락처를 삭제하시겠습니까?')) return;
+  if (!confirm('연락처를 삭제하시겠습니까?')) return false;
   contacts = contacts.filter(c => c.id !== id);
   // 연결된 업무 담당자 초기화
   tasks.forEach(t => { t.assigneeIds = (t.assigneeIds || []).filter(x => x !== id); });
   save(); saveContacts();
   renderContacts(); renderAll();
   toast('연락처 삭제됨');
+  return true;
 }
 
 /**

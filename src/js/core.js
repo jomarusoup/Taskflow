@@ -2,7 +2,7 @@
 FILE NAME   : core.js
 DESCRIPTION : 전역 상태 관리, localStorage 데이터 계층, 공통 유틸리티 함수
 DATA        : 2026-04-20
-Modification: 2026-04-20
+Modification: 2026-07-22
 ******************************************************************************/
 
 // ── 전역 에러 핸들러 ────────────────────────────────
@@ -92,7 +92,7 @@ function load() {
     const _invRaw = invLoadData();
     invLedgers = _invRaw.ledgers;
     invActiveLedgerId = _invRaw.activeLedger;
-    invSt = invMakeState(invLedgers.find(l=>l.id===invActiveLedgerId)?.data || _invRaw.ledgers[0].data);
+    invSt = invMakeState(invLedgers.find(l=>l.id===invActiveLedgerId)?.data || _invRaw.ledgers[0]?.data || null);
   } catch(e) { console.warn('inv init error',e); invLedgers=[]; invActiveLedgerId=null; invSt=null; }
   // migrate: ensure linkedTaskIds exists
   tasks.forEach(t => {
@@ -107,12 +107,28 @@ function load() {
     if (!c.categoryRoles) c.categoryRoles = c.categories.map(cat => ({category: cat, role: c.type || 'main'}));
   });
 }
+/******************************************************************************
+FUNCTION    : safeSetItem
+DESCRIPTION : localStorage 저장 공통 래퍼. quota 초과 등 저장 실패 시
+              콘솔 경고 + 토스트 알림으로 조용한 데이터 유실 방지
+PARAMETERS  : key string - localStorage 키
+              val any    - JSON 직렬화하여 저장할 값
+RETURNED    : void
+******************************************************************************/
+function safeSetItem(key, val) {
+  try {
+    localStorage.setItem(key, JSON.stringify(val));
+  } catch(e) {
+    console.warn('[TASKFLOW] 저장 실패:', key, e);
+    if (typeof toast === 'function') toast('저장 실패: 저장 공간 부족');
+  }
+}
 /* 각 데이터 유형을 localStorage에 저장하는 단순 래퍼 */
-function save()           { localStorage.setItem(TASK_KEY,      JSON.stringify(tasks)); }
-function saveSettings()   { localStorage.setItem(SETTINGS_KEY,  JSON.stringify(settings)); }
-function saveRecurring()  { localStorage.setItem(RECURRING_KEY, JSON.stringify(recurringTasks)); }
-function saveAnnual()     { localStorage.setItem(ANNUAL_KEY,    JSON.stringify(annualTasks)); }
-function saveContacts()   { localStorage.setItem(CONTACT_KEY,   JSON.stringify(contacts)); }
+function save()           { safeSetItem(TASK_KEY,      tasks); }
+function saveSettings()   { safeSetItem(SETTINGS_KEY,  settings); }
+function saveRecurring()  { safeSetItem(RECURRING_KEY, recurringTasks); }
+function saveAnnual()     { safeSetItem(ANNUAL_KEY,    annualTasks); }
+function saveContacts()   { safeSetItem(CONTACT_KEY,   contacts); }
 
 // ── ID GENERATION: 순번 기반 (0, 1, 2, ...)
 let _idCounter = -1;

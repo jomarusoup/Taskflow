@@ -91,7 +91,7 @@ function renderSummaryCards() {
   // ── 정기업무 요약 (이달 기준 고정) ────────────────
   const mk = `${nowY}-${String(nowM).padStart(2,'0')}`;
   const recTotal  = recurringTasks.length;
-  const recDone   = recurringTasks.filter(t => t.completions[mk]?.done).length;
+  const recDone   = recurringTasks.filter(t => (t.completions||{})[mk]?.done).length;
   const recUndone = recTotal - recDone;
   const recDates  = recMonthDates(nowY, nowM);
   const isPastDeadline = today() > recDates.end;
@@ -186,7 +186,7 @@ function renderCalendar() {
     cellDates.push(ds);
     const daySchs = schedules.filter(s=>s.date===ds);
     const schChips = daySchs.length ? `<div class="cal-sch-chips">${
-      daySchs.slice(0,3).map(s=>`<div class="cal-sch-chip" style="border-left:2px solid ${s.color};background:${s.color}22" onclick="event.stopPropagation();openSchModal('${ds}',${JSON.stringify(s).replace(/"/g,'&quot;')})"><span class="cal-sch-chip-title">${esc(s.title)}</span></div>`).join('')
+      daySchs.slice(0,3).map(s=>`<div class="cal-sch-chip" style="border-left:2px solid ${s.color};background:${s.color}22" data-sch="${esc(JSON.stringify(s))}" onclick="event.stopPropagation();openSchModal('${ds}',JSON.parse(this.dataset.sch))"><span class="cal-sch-chip-title">${esc(s.title)}</span></div>`).join('')
     }${daySchs.length>3?`<div class="cal-sch-chip-more">+${daySchs.length-3}</div>`:''}</div>` : '';
     cellHtml+=`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}${isSel?' selected':''}${dow===0?' sunday':''}${dow===6?' saturday':''}" onclick="openCalDetail('${ds}')">
       <div class="cal-cell-hd"><div class="cal-day-num">${dayNum}</div><button class="cal-cell-add" onclick="event.stopPropagation();openSchModal('${ds}')" title="일정 추가">＋</button></div>
@@ -332,7 +332,7 @@ function _renderEventBars(cellDates, total, firstDay, evMap, _retry) {
       const txt   = esc(t.title.slice(0, Math.max(4, Math.floor(width/7))));
       const icon  = (!t.startDate || t.startDate === t.dueDate) && t.dueDate ? ' ◎' : ' ▶';
       barsHtml += `<div class="cal-bar" style="left:${left}px;top:${top}px;width:${width}px;background:${color}28;color:${color};border:1px solid ${color}55"
-        onclick="event.stopPropagation();openCalDetail('${esc(b.t.startDate||b.t.dueDate)}')"
+        onclick="event.stopPropagation();openCalDetail('${esc(b.t.dueDate||b.t.startDate)}')"
         ondblclick="event.stopPropagation();event.preventDefault();jumpToLedger('${esc(t.id)}')"
         title="${esc(t.title)}">
         <span class="cal-chip-dot" style="background:${color}"></span>
@@ -349,7 +349,7 @@ function _renderEventBars(cellDates, total, firstDay, evMap, _retry) {
                     : isLast  ? `<span class="cal-bar-text" style="justify-content:flex-end">${txt}</span>`
                     : '';
       barsHtml += `<div class="cal-bar" style="left:${left}px;top:${top}px;width:${width}px;background:${color}30;color:${color};border:1px solid ${color}55;border-radius:${bL} ${bR} ${bR} ${bL}"
-        onclick="event.stopPropagation();openCalDetail('${esc(b.t.startDate||b.t.dueDate)}')"
+        onclick="event.stopPropagation();openCalDetail('${esc(b.t.dueDate||b.t.startDate)}')"
         ondblclick="event.stopPropagation();event.preventDefault();jumpToLedger('${esc(t.id)}')"
         title="${esc(t.title)}">${content}</div>`;
     }
@@ -384,7 +384,7 @@ function _renderCalDetail(ds) {
     <div class="cal-sch-hd"><span>일정</span><button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px" onclick="openSchModal('${ds}')">＋ 추가</button></div>
     ${daySchs.length ? daySchs.map(s=>{
       const time = s.startTime ? (s.endTime ? `${s.startTime}–${s.endTime}` : s.startTime) : '';
-      return `<div class="cal-sch-item" onclick="openSchModal('${ds}',${JSON.stringify(s).replace(/"/g,'&quot;')})">
+      return `<div class="cal-sch-item" data-sch="${esc(JSON.stringify(s))}" onclick="openSchModal('${ds}',JSON.parse(this.dataset.sch))">
         <span class="cal-sch-item-dot" style="background:${s.color}"></span>
         <span class="cal-sch-item-title">${esc(s.title)}</span>
         ${time?`<span class="cal-sch-item-time">${esc(time)}</span>`:''}
@@ -501,6 +501,9 @@ function deleteSchEntry(id){
 }
 
 // ── WEEKLY ────────────────────────────────────────────
+/* _localISO: Date 객체를 로컬 시간 기준 YYYY-MM-DD 문자열로 변환 (toISOString의 UTC 시프트 방지) */
+function _localISO(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
 function getNextMonday() {
   const now = new Date();
   now.setHours(0,0,0,0);
@@ -526,11 +529,12 @@ function renderWeekly() {
   const nextMon = getNextMonday();
   const thisSun = new Date(nextMon); thisSun.setDate(nextMon.getDate() - 1);
 
-  const isoStr  = d => d.toISOString().split('T')[0];
+  const isoStr  = _localISO;
   const fmtMD   = d => `${d.getMonth()+1}/${d.getDate()}`;
 
   const thisMonStr = isoStr(thisMon);
   const thisSunStr = isoStr(thisSun);
+  const nextMonStr = isoStr(nextMon);
 
   const label = document.getElementById('weekly-label');
   if (label) label.textContent = `${fmtMD(thisMon)}(월) ~ ${fmtMD(thisSun)}(일)`;
@@ -544,17 +548,14 @@ function renderWeekly() {
     return s <= thisSunStr && e >= thisMonStr;
   });
 
-  const today_ = today();
-
-  // 오늘 기준 마감까지 남은 일수로 분류
-  function daysUntilDue(t) {
+  // 차주 월요일 이전 마감 여부로 분류 (라벨 기준과 동일, 마감일 없으면 시작일 사용)
+  function dueBeforeNextWeek(t) {
     const due = t.dueDate || t.startDate;
-    if (!due) return 999;
-    return Math.ceil((new Date(due) - new Date(today_)) / 86400000);
+    return !!due && due < nextMonStr;
   }
 
-  const doneGroup   = weekTasks.filter(t => daysUntilDue(t) <= 6);
-  const activeGroup = weekTasks.filter(t => daysUntilDue(t) >= 7);
+  const doneGroup   = weekTasks.filter(t => dueBeforeNextWeek(t));
+  const activeGroup = weekTasks.filter(t => !dueBeforeNextWeek(t));
 
   const priOrder  = settings.priorities.map(p => p.key);
   const sortByPri = arr => [...arr].sort((a,b) => priOrder.indexOf(a.priority) - priOrder.indexOf(b.priority));
@@ -626,7 +627,7 @@ function recMonthDates(year, month) {
   // month: 1-based
   const result = { start: null, end: null };
   const d = new Date(year, month - 1, 1);
-  result.start = d.toISOString().split('T')[0];
+  result.start = _localISO(d);
   // 첫주 금요일 찾기 (또는 5영업일째 날)
   let bizCount = 0, cur = new Date(d);
   while (bizCount < 5) {
@@ -634,7 +635,7 @@ function recMonthDates(year, month) {
     if (dow !== 0 && dow !== 6) bizCount++;
     if (bizCount < 5) cur.setDate(cur.getDate() + 1);
   }
-  result.end = cur.toISOString().split('T')[0];
+  result.end = _localISO(cur);
   return result;
 }
 
@@ -1034,7 +1035,7 @@ function exportWeeklyCSV() {
   const thisMon = getThisMonday();
   const nextMon = getNextMonday();
   const thisSun = new Date(nextMon); thisSun.setDate(nextMon.getDate() - 1);
-  const isoStr  = d => d.toISOString().split('T')[0];
+  const isoStr  = _localISO;
   const thisMonStr = isoStr(thisMon);
   const thisSunStr = isoStr(thisSun);
 

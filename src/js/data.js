@@ -2,7 +2,7 @@
 FILE NAME   : data.js
 DESCRIPTION : 업무(Task) CRUD, 월간·연간 업무 연동 태스크 동기화 로직
 DATA        : 2026-04-20
-Modification: 2026-04-20
+Modification: 2026-07-22
 ******************************************************************************/
 
 // ── TASK CRUD ─────────────────────────────────────────
@@ -44,8 +44,11 @@ function deleteTask(id) { tasks = tasks.filter(t => t.id !== id); save(); }
 function archiveDone()  { let c=0; tasks.forEach(t=>{if(t.status==='done'){t.status='archived';c++;}}); save(); renderAll(); toast(`${c}개 아카이브 완료`); }
 
 // ── RECURRING / ANNUAL SYNC ──────────────────────────
-/* helper: last day of month as ISO string */
-function lastDayOfMonth(y, m) { return new Date(y, m, 0).toISOString().split('T')[0]; }
+/* helper: last day of month as ISO string (로컬 성분 조립 — toISOString은 UTC 변환으로 하루 밀림) */
+function lastDayOfMonth(y, m) {
+  const d = new Date(y, m, 0);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 /* helper: first day of month as ISO string */
 function firstDayOfMonth(y, m) { return `${y}-${String(m).padStart(2,'0')}-01`; }
 

@@ -68,7 +68,7 @@ PARAMETERS  : t object - 업무 객체 (id, title, priority, tags, dueDate 사�
 RETURNED    : string - 칸반 카드 HTML
 ******************************************************************************/
 function renderKCard(t){
-  const tags=t.tags.map(tg=>`<span class="tag">${esc(tg)}</span>`).join('');
+  const tags=(t.tags||[]).map(tg=>`<span class="tag">${esc(tg)}</span>`).join('');
   const due=t.dueDate?`<span class="kcard-due ${isOverdue(t)?'overdue':''}">${fmtDateShort(t.dueDate)}</span>`:'';
   return `<div class="kcard" draggable="true" data-id="${t.id}"
     ondblclick="event.stopPropagation();jumpToLedger('${esc(t.id)}')"
@@ -94,7 +94,7 @@ function onDragStart(e){
   e.dataTransfer.effectAllowed='move';
   e.dataTransfer.setData('type','card');
 }
-function onDragEnd(e){e.currentTarget.classList.remove('dragging');document.querySelectorAll('.kanban-cards').forEach(c=>c.classList.remove('drag-over'));}
+function onDragEnd(e){e.currentTarget.classList.remove('dragging');document.querySelectorAll('.kanban-cards').forEach(c=>c.classList.remove('drag-over'));dragSrcId=null;}
 function onDragOver(e,k){
   e.preventDefault();
   if(colDragKey) return;
@@ -112,6 +112,8 @@ function onDrop(e,k){
   e.preventDefault();e.stopPropagation();
   document.getElementById('cards-'+k)?.classList.remove('drag-over');
   if(colDragKey||!dragSrcId)return;
+  // 카드 드래그가 아닌 외부 드롭(텍스트·파일 등)은 무시
+  if(e.dataTransfer.getData('type')!=='card'){dragSrcId=null;return;}
   const t=tasks.find(x=>x.id===dragSrcId);
   if(t&&t.status!==k){updateTask(dragSrcId,{status:k});renderAll();toast(`"${t.title.slice(0,18)}" → ${statusLabel(k)}`);}
   dragSrcId=null;

@@ -716,7 +716,7 @@ th.inv-col-drag-right{border-right:2px solid var(--amber)!important;}
 .msel-wrap{position:relative;flex-shrink:0;}
 .msel-btn{display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--border);color:var(--text2);font-family:var(--sans);font-size:12px;padding:5px 10px;border-radius:var(--r);cursor:pointer;white-space:nowrap;transition:border-color .15s;}
 .msel-btn:hover{border-color:var(--border-h);color:var(--text);}
-.msel-btn.active{border-color:var(--amber);color:var(--amber);}
+.msel-btn.has-val{border-color:var(--amber);color:var(--amber);}
 .msel-arrow{font-size:10px;color:var(--text3);}
 .msel-dropdown{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:50;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);box-shadow:0 8px 24px var(--shadow);min-width:160px;max-height:240px;overflow-y:auto;padding:4px 0;}
 .msel-dropdown.open{display:block;}

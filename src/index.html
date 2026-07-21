@@ -423,7 +423,7 @@
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <div style="flex:1;min-width:180px;">
               <div class="ep-label" style="margin-bottom:6px">백업 알림 주기</div>
-              <select class="field-select" id="backup-interval-sel" onchange="saveBackupInterval(this.value)" style="width:100%">
+              <select class="field-select" data-backup="interval" style="width:100%">
                 <option value="1">매일</option>
                 <option value="3">3일마다</option>
                 <option value="7" selected>7일마다</option>
@@ -434,7 +434,7 @@
             </div>
             <div style="flex:1;min-width:180px;">
               <div class="ep-label" style="margin-bottom:6px">마지막 백업</div>
-              <div id="last-backup-display" style="font-family:var(--mono);font-size:12px;color:var(--text2);padding:7px 0;">기록 없음</div>
+              <div data-backup="last-display" style="font-family:var(--mono);font-size:12px;color:var(--text2);padding:7px 0;">기록 없음</div>
             </div>
           </div>
           <button class="btn btn-primary" onclick="doBackup()" style="align-self:flex-start;gap:8px;">
@@ -537,7 +537,7 @@
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <div style="flex:1;min-width:180px;">
               <div class="ep-label" style="margin-bottom:6px">백업 알림 주기</div>
-              <select class="field-select" id="backup-interval-sel" onchange="saveBackupInterval(this.value)" style="width:100%">
+              <select class="field-select" data-backup="interval" style="width:100%">
                 <option value="1">매일</option>
                 <option value="3">3일마다</option>
                 <option value="7" selected>7일마다</option>
@@ -548,7 +548,7 @@
             </div>
             <div style="flex:1;min-width:180px;">
               <div class="ep-label" style="margin-bottom:6px">마지막 백업</div>
-              <div id="last-backup-display" style="font-family:var(--mono);font-size:12px;color:var(--text2);padding:7px 0;">기록 없음</div>
+              <div data-backup="last-display" style="font-family:var(--mono);font-size:12px;color:var(--text2);padding:7px 0;">기록 없음</div>
             </div>
           </div>
           <button class="btn btn-primary" onclick="doBackup()" style="align-self:flex-start;gap:8px;">

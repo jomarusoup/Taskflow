@@ -5,8 +5,6 @@
 // ── MODAL ─────────────────────────────────────────────
 function openModal(id = null, defaultStatus = 'todo') {
   editingId = id;
-  // populate dropdowns from settings
-  populateModalDropdowns();
   const modalTitle = document.getElementById('modal-title');
   const modalDeleteBtn = document.getElementById('modal-delete-btn');
   if (modalTitle) modalTitle.textContent = id ? '업무 수정' : '업무 추가';
@@ -14,26 +12,29 @@ function openModal(id = null, defaultStatus = 'todo') {
 
   if (id) {
     const t = tasks.find(x => x.id === id); if (!t) return;
+    // 선택 상태를 먼저 설정한 뒤 드롭다운 렌더 (이전 모달 상태 잔재 방지)
+    selectedTags = [...(t.tags || [])];
+    selectedCategories = (t.category || '').split(',').map(s => s.trim()).filter(Boolean);
+    selectedLinkedTasks = [...(t.linkedTaskIds || [])];
+    populateModalDropdowns();
     document.getElementById('f-title').value     = t.title;
     document.getElementById('f-priority').value  = t.priority;
     document.getElementById('f-status').value    = t.status;
     document.getElementById('f-start').value     = t.startDate || '';
     document.getElementById('f-due').value       = t.dueDate   || '';
     const memoEl = document.getElementById('f-memo'); if (memoEl) { memoEl.value = t.memo || ''; autoGrowTextarea(memoEl); }
-    selectedTags = [...(t.tags || [])];
-    selectedCategories = (t.category || '').split(',').map(s => s.trim()).filter(Boolean);
-    selectedLinkedTasks = [...(t.linkedTaskIds || [])];
     _populateAssignee(selectedCategories[0] || '', t.assigneeIds || []);
   } else {
+    selectedTags = [];
+    selectedCategories = [];
+    selectedLinkedTasks = [];
+    populateModalDropdowns();
     document.getElementById('f-title').value    = '';
     document.getElementById('f-priority').value = 'medium';
     document.getElementById('f-status').value   = defaultStatus;
     document.getElementById('f-start').value    = '';
     document.getElementById('f-due').value      = '';
     const memoEl = document.getElementById('f-memo'); if (memoEl) { memoEl.value = ''; memoEl.style.height = ''; }
-    selectedTags = [];
-    selectedCategories = [];
-    selectedLinkedTasks = [];
     _populateAssignee('', []);
   }
   renderCatMulti();
@@ -60,7 +61,7 @@ function populateModalDropdowns() {
   // Tag dropdown options
   const dd = document.getElementById('tag-dropdown');
   if (dd) dd.innerHTML = settings.tags.map(tag => `
-    <div class="tag-option ${selectedTags.includes(tag)?'selected':''}" onclick="toggleTag(event,'${esc(tag)}')">
+    <div class="tag-option ${selectedTags.includes(tag)?'selected':''}" data-tag="${esc(tag)}" onclick="toggleTag(event,'${esc(tag)}')">
       <div class="tag-check">${selectedTags.includes(tag)?'✓':''}</div>
       ${esc(tag)}
     </div>`).join('');
@@ -85,9 +86,9 @@ function renderTagMulti() {
       sel.insertBefore(pill, ph);
     });
   }
-  // update dropdown
+  // update dropdown (data-tag 기준 매칭 — textContent는 체크마크 포함이라 부정확)
   document.querySelectorAll('#tag-dropdown .tag-option').forEach(el => {
-    const tag = el.textContent.trim();
+    const tag = el.dataset.tag;
     const isSel = selectedTags.includes(tag);
     el.classList.toggle('selected', isSel);
     const check = el.querySelector('.tag-check');
@@ -99,7 +100,7 @@ function toggleTagDropdown(e) {
   if (!dd) return;
   // re-render options
   dd.innerHTML = settings.tags.map(tag => `
-    <div class="tag-option ${selectedTags.includes(tag)?'selected':''}" onclick="toggleTag(event,'${esc(tag)}')">
+    <div class="tag-option ${selectedTags.includes(tag)?'selected':''}" data-tag="${esc(tag)}" onclick="toggleTag(event,'${esc(tag)}')">
       <div class="tag-check">${selectedTags.includes(tag)?'✓':''}</div>
       ${esc(tag)}
     </div>`).join('');
@@ -113,7 +114,7 @@ function toggleTag(e, tag) {
   // refresh dropdown
   const dd = document.getElementById('tag-dropdown');
   if (dd) dd.innerHTML = settings.tags.map(t => `
-    <div class="tag-option ${selectedTags.includes(t)?'selected':''}" onclick="toggleTag(event,'${esc(t)}')">
+    <div class="tag-option ${selectedTags.includes(t)?'selected':''}" data-tag="${esc(t)}" onclick="toggleTag(event,'${esc(t)}')">
       <div class="tag-check">${selectedTags.includes(t)?'✓':''}</div>
       ${esc(t)}
     </div>`).join('');
@@ -359,9 +360,9 @@ function showRichModal({ title, data, extraTop = '', onSave, onDelete = null }) 
     settings.categories.map(c=>`<option value="${esc(c)}" ${data?.category===c?'selected':''}>${esc(c)}</option>`).join('');
   const priOpts = settings.priorities.map(p=>`<option value="${esc(p.key)}" ${(data?.priority||'medium')===p.key?'selected':''}>${esc(p.label)}</option>`).join('');
   const stOpts  = settings.statuses.map(s=>`<option value="${esc(s.key)}" ${(data?.status||'todo')===s.key?'selected':''}>${esc(s.label)}</option>`).join('');
-  const tagPillsHtml = () => _richModalTags.map(tg=>`<div class="tag-pill">${esc(tg)}<span class="tag-pill-x" onclick="richRemoveTag('${esc(tg)}')">✕</span></div>`).join('');
+  const tagPillsHtml = () => _richModalTags.map(tg=>`<div class="tag-pill">${esc(tg)}<span class="tag-pill-x" onclick="richRemoveTag(event,'${esc(tg)}')">✕</span></div>`).join('');
   const tagDdHtml = () => settings.tags.map(tg=>`
-    <div class="tag-option ${_richModalTags.includes(tg)?'selected':''}" onclick="richToggleTag('${esc(tg)}')">
+    <div class="tag-option ${_richModalTags.includes(tg)?'selected':''}" onclick="richToggleTag(event,'${esc(tg)}')">
       <div class="tag-check">${_richModalTags.includes(tg)?'✓':''}</div>${esc(tg)}
     </div>`).join('');
   const delBtn = onDelete ? `<button class="btn btn-danger btn-sm" onclick="richModalDelete()" style="margin-right:auto">삭제</button>` : '';
@@ -412,31 +413,33 @@ function richToggleTagDd(e) {
   const dd = document.getElementById('rich-tag-dd');
   if (!dd) return;
   dd.innerHTML = settings.tags.map(tg=>`
-    <div class="tag-option ${_richModalTags.includes(tg)?'selected':''}" onclick="richToggleTag('${esc(tg)}')">
+    <div class="tag-option ${_richModalTags.includes(tg)?'selected':''}" onclick="richToggleTag(event,'${esc(tg)}')">
       <div class="tag-check">${_richModalTags.includes(tg)?'✓':''}</div>${esc(tg)}
     </div>`).join('');
   dd.classList.toggle('open');
 }
-function richToggleTag(tag) {
+function richToggleTag(e, tag) {
+  if (e) e.stopPropagation(); // rich-tag-multi의 richToggleTagDd로 버블링 방지 (클릭마다 드롭다운 닫힘 문제)
   const i = _richModalTags.indexOf(tag);
   if (i>=0) _richModalTags.splice(i,1); else _richModalTags.push(tag);
   const sel = document.getElementById('rich-tag-selected');
   const dd  = document.getElementById('rich-tag-dd');
   if (sel) sel.innerHTML = _richModalTags.length
-    ? _richModalTags.map(tg=>`<div class="tag-pill">${esc(tg)}<span class="tag-pill-x" onclick="richRemoveTag('${esc(tg)}')">✕</span></div>`).join('')
+    ? _richModalTags.map(tg=>`<div class="tag-pill">${esc(tg)}<span class="tag-pill-x" onclick="richRemoveTag(event,'${esc(tg)}')">✕</span></div>`).join('')
     : '<span class="tag-placeholder">태그 선택...</span>';
   if (dd) dd.innerHTML = settings.tags.map(tg=>`
-    <div class="tag-option ${_richModalTags.includes(tg)?'selected':''}" onclick="richToggleTag('${esc(tg)}')">
+    <div class="tag-option ${_richModalTags.includes(tg)?'selected':''}" onclick="richToggleTag(event,'${esc(tg)}')">
       <div class="tag-check">${_richModalTags.includes(tg)?'✓':''}</div>${esc(tg)}
     </div>`).join('');
 }
-function richRemoveTag(tag) {
+function richRemoveTag(e, tag) {
+  if (e) e.stopPropagation(); // rich-tag-multi의 richToggleTagDd로 버블링 방지
   _richModalTags = _richModalTags.filter(t=>t!==tag);
-  richToggleTag(tag); richToggleTag(tag); // refresh without toggling
+  richToggleTag(null, tag); richToggleTag(null, tag); // refresh without toggling
   _richModalTags = _richModalTags.filter(t=>t!==tag);
   const sel = document.getElementById('rich-tag-selected');
   if (sel) sel.innerHTML = _richModalTags.length
-    ? _richModalTags.map(tg=>`<div class="tag-pill">${esc(tg)}<span class="tag-pill-x" onclick="richRemoveTag('${esc(tg)}')">✕</span></div>`).join('')
+    ? _richModalTags.map(tg=>`<div class="tag-pill">${esc(tg)}<span class="tag-pill-x" onclick="richRemoveTag(event,'${esc(tg)}')">✕</span></div>`).join('')
     : '<span class="tag-placeholder">태그 선택...</span>';
 }
 function richModalSave() {

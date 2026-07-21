@@ -124,7 +124,7 @@ function parseMarkdown(md){
     const ulM  = raw.match(/^( *)[-*] (.+)$/);
     const olM  = raw.match(/^( *)\d+\. (.+)$/);
 
-    if (cbX || cbO || ulM || ulM || olM) {
+    if (cbX || cbO || ulM || olM) {
       const match = cbX || cbO || ulM || olM;
       if (!match) continue;
       const spaces = match[1].length;
@@ -261,7 +261,10 @@ function editInline(prefix, idx, type){
   inp.className='settings-inline-input'; inp.value=cur; inp.style.flex='1';
   label.parentNode.insertBefore(inp, label);
   inp.focus(); inp.select();
+  let closed=false; // Escape 취소 후 blur가 commit을 재실행하는 경합 방지
   function commit(){
+    if(closed)return;
+    closed=true;
     const val=inp.value.trim();
     if(val && val!==cur){
       if(type==='categories') tasks.forEach(t=>{
@@ -277,7 +280,7 @@ function editInline(prefix, idx, type){
     renderSettings(); renderAll();
   }
   inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', e=>{ if(e.key==='Enter')inp.blur(); if(e.key==='Escape'){inp.remove();label.style.display='';} });
+  inp.addEventListener('keydown', e=>{ if(e.key==='Enter')inp.blur(); if(e.key==='Escape'){closed=true;inp.remove();label.style.display='';} });
 }
 
 function editPriLabel(idx){
@@ -289,13 +292,16 @@ function editPriLabel(idx){
   inp.className='settings-inline-input'; inp.value=cur; inp.style.width='120px';
   badge.parentNode.insertBefore(inp, badge);
   inp.focus(); inp.select();
+  let closed=false; // Escape 취소 후 blur가 commit을 재실행하는 경합 방지
   function commit(){
+    if(closed)return;
+    closed=true;
     const val=inp.value.trim();
     if(val&&val!==cur){ settings.priorities[idx].label=val; saveSettings(); toast(`우선순위 이름 수정: "${val}"`); }
     inp.remove(); badge.style.display=''; renderSettings(); updateFilterDropdowns();
   }
   inp.addEventListener('blur',commit);
-  inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.remove();badge.style.display='';}});
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){closed=true;inp.remove();badge.style.display='';}});
 }
 
 function updatePriColor(idx, hexVal){ settings.priorities[idx].color=hexVal; saveSettings(); renderSettings(); renderAll(); }
@@ -330,13 +336,16 @@ function editStatusLabel(idx){
   inp.className='settings-inline-input'; inp.value=cur; inp.style.width='130px';
   badge.parentNode.insertBefore(inp, badge);
   inp.focus(); inp.select();
+  let closed=false; // Escape 취소 후 blur가 commit을 재실행하는 경합 방지
   function commit(){
+    if(closed)return;
+    closed=true;
     const val=inp.value.trim();
     if(val&&val!==cur){ settings.statuses[idx].label=val; saveSettings(); toast(`상태 이름 수정: "${val}"`); }
     inp.remove(); badge.style.display=''; renderSettings(); updateFilterDropdowns();
   }
   inp.addEventListener('blur',commit);
-  inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.remove();badge.style.display='';}});
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){closed=true;inp.remove();badge.style.display='';}});
 }
 
 function updateStatusColor(idx, hexVal){ settings.statuses[idx].color=hexVal; saveSettings(); renderSettings(); renderAll(); }

@@ -21,11 +21,14 @@ function setLedgerMode(mode) {
   renderLedger();
 }
 
-function renderLedger(){
-  const badge = document.getElementById('badge-ledger');
-  const activeTasks = tasks.filter(t => !t.linkedSourceType && t.status !== 'archived');
-  if (badge) badge.textContent = activeTasks.length;
-
+/******************************************************************************
+FUNCTION    : _getFilteredTasks
+DESCRIPTION : 업무대장 검색·상태·우선순위·카테고리·태그 필터를 적용한 목록 반환
+              (renderLedger·exportCSV 공용)
+PARAMETERS  : 없음 (DOM 입력값과 mselState 전역 사용)
+RETURNED    : array - 필터링된 업무 배열
+******************************************************************************/
+function _getFilteredTasks() {
   let list = tasks.filter(t => !t.linkedSourceType);
   const search = (document.getElementById('ledger-search')?.value || '').trim().toLowerCase();
   const tag = (document.getElementById('ledger-tag')?.value || '').trim().toLowerCase();
@@ -37,7 +40,16 @@ function renderLedger(){
   if(selSt.size)  list = list.filter(t => selSt.has(t.status));
   if(selPri.size) list = list.filter(t => selPri.has(t.priority));
   if(selCat.size && ledgerMode !== 'group') list = list.filter(t => (t.category||'').split(',').map(s=>s.trim()).some(c=>selCat.has(c)));
-  if(tag)         list = list.filter(t => t.tags.some(tg => tg.toLowerCase().includes(tag)));
+  if(tag)         list = list.filter(t => (t.tags||[]).some(tg => tg.toLowerCase().includes(tag)));
+  return list;
+}
+
+function renderLedger(){
+  const badge = document.getElementById('badge-ledger');
+  const activeTasks = tasks.filter(t => !t.linkedSourceType && t.status !== 'archived');
+  if (badge) badge.textContent = activeTasks.length;
+
+  let list = _getFilteredTasks();
 
   // 정렬 적용
   list = _applyLedgerSort(list);
@@ -50,6 +62,8 @@ function renderLedger(){
   if (ledgerMode === 'group') {
     tableWrap.style.display = 'none';
     groupWrap.classList.add('visible');
+    const listTbody = document.getElementById('ledger-tbody');
+    if (listTbody) listTbody.innerHTML = ''; // 숨긴 리스트 뷰의 ep-* ID 중복 방지
     _renderLedgerGroup(list);
     return;
   }
@@ -57,6 +71,7 @@ function renderLedger(){
   // ── 리스트 모드 ──────────────────────────────────
   tableWrap.style.display = '';
   groupWrap.classList.remove('visible');
+  groupWrap.innerHTML = ''; // 숨긴 그룹 뷰의 ep-* ID 중복 방지
 
   const tbody = document.getElementById('ledger-tbody');
   if (!tbody) return;
@@ -116,7 +131,9 @@ function _renderLedgerGroup(list) {
     if (!cats.length) cats.push('미분류');
     cats.forEach(cat => { if (!groups[cat]) groups[cat] = []; groups[cat].push(t); });
   });
-  const orderedCats = [ ...settings.categories.filter(c => groups[c]), ...(groups['미분류'] ? ['미분류'] : []) ];
+  // settings.categories에 없는 커스텀 카테고리도 뒤에 노출 (업무 실종 방지)
+  const customCats = Object.keys(groups).filter(c => c !== '미분류' && !settings.categories.includes(c)).sort();
+  const orderedCats = [ ...settings.categories.filter(c => groups[c]), ...customCats, ...(groups['미분류'] ? ['미분류'] : []) ];
   if (grpOpen.size === 0) orderedCats.forEach(c => grpOpen.add(c));
 
   wrap.innerHTML = orderedCats.map(cat => {
@@ -154,7 +171,7 @@ function _renderLedgerGroup(list) {
     const headerExtra = overdueCount > 0 ? `<span style="font-size:10px;color:var(--red);font-family:var(--mono);margin-left:4px">⚠️ ${overdueCount}</span>` : '';
 
     return `<div class="grp-card">
-      <div class="grp-header ${isOpen?'open':''}" onclick="toggleGrp('${esc(cat)}')">
+      <div class="grp-header ${isOpen?'open':''}" data-cat="${esc(cat)}">
         <span class="grp-icon">📁</span>
         <span class="grp-name">${esc(cat)}</span>
         ${headerExtra}
@@ -186,6 +203,11 @@ function _renderLedgerGroup(list) {
     </div>`;
   }).join('');
 
+  // 그룹 헤더 클릭 바인딩 (카테고리명 인젝션 방지: data-* + listener)
+  wrap.querySelectorAll('.grp-header').forEach(h => {
+    h.addEventListener('click', () => toggleGrp(h.dataset.cat));
+  });
+
   if (grpExpandedId) {
     const ta = document.getElementById('ep-memo-' + grpExpandedId);
     if (ta) { attachMemoTabKey(ta); autoGrowTextarea(ta); ta.addEventListener('keydown', e => { if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveExpandRow(grpExpandedId);} }); }
@@ -197,12 +219,28 @@ function _renderLedgerGroup(list) {
 
 function toggleGrp(cat) {
   if (grpOpen.has(cat)) grpOpen.delete(cat); else grpOpen.add(cat);
-  const headers = document.querySelectorAll('.grp-header');
-  headers.forEach(h => { if (h.getAttribute('onclick') === `toggleGrp('${cat}')`) h.classList.toggle('open'); });
+  document.querySelectorAll('.grp-header').forEach(h => { if (h.dataset.cat === cat) h.classList.toggle('open'); });
+}
+
+/******************************************************************************
+FUNCTION    : _initEpState
+DESCRIPTION : 상세패널(EP) 편집용 카테고리·태그·연결업무 상태를 task에서 초기화.
+              미초기화 상태로 saveExpandRow가 실행되면 빈 값으로 덮어써
+              데이터가 소실되므로, 패널을 여는 모든 경로에서 반드시 호출
+PARAMETERS  : string id - 업무 ID
+RETURNED    : 없음
+******************************************************************************/
+function _initEpState(id) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  _epCatState[id] = (t.category||'').split(',').map(s=>s.trim()).filter(Boolean);
+  _epTagState[id] = [...(t.tags||[])];
+  _epLinkedState[id] = [...(t.linkedTaskIds||[])];
 }
 
 function toggleGrpExpand(id) {
   grpExpandedId = (grpExpandedId === id) ? null : id;
+  if (grpExpandedId === id) _initEpState(id);
   renderLedger();
   if (grpExpandedId === id) {
     setTimeout(() => {
@@ -222,6 +260,7 @@ function toggleGrpExpand(id) {
 function switchToListAndExpand(taskId) {
   setLedgerMode('list');
   expandedId = taskId;
+  _initEpState(taskId);
   renderLedger();
   setTimeout(() => { const row = document.getElementById('exp-row-' + taskId); if (row) row.scrollIntoView({behavior:'smooth', block:'center'}); }, 60);
 }
@@ -229,14 +268,7 @@ function switchToListAndExpand(taskId) {
 function toggleExpand(id){
   const opening = (expandedId !== id);
   expandedId = opening ? id : null;
-  if(opening){
-    const t = tasks.find(x => x.id === id);
-    if(t){
-      _epCatState[id] = (t.category||'').split(',').map(s=>s.trim()).filter(Boolean);
-      _epTagState[id] = [...(t.tags||[])];
-      _epLinkedState[id] = [...(t.linkedTaskIds||[])];
-    }
-  }
+  if(opening) _initEpState(id);
   renderLedger();
   if(expandedId) setTimeout(() => {
     const r = document.getElementById('exp-row-' + expandedId);
@@ -286,10 +318,11 @@ function _applyGrpSort(list, cat) {
 function _updateSortHeaders() {
   const headers = document.querySelectorAll('#ledger-table th[onclick^="setLedgerSort"]');
   headers.forEach(th => {
-    const key = th.getAttribute('onclick').match(/'([^']+)'/)[1];
+    const key = th.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+    if (!key) return;
     const icon = (ledgerSort.key === key) ? (ledgerSort.dir === 1 ? ' ▲' : ' ▼') : ' ⇅';
-    const span = th.querySelector('span') || th;
-    if (th.querySelector('span')) th.querySelector('span').textContent = icon;
+    const span = th.querySelector('span');
+    if (span) span.textContent = icon;
   });
 }
 
@@ -535,7 +568,12 @@ function renderEpTagMulti(taskId) {
     tags.forEach(tag => {
       const pill = document.createElement('div');
       pill.className = 'tag-pill';
-      pill.innerHTML = `${esc(tag)} <span class="tag-pill-x" onclick="removeEpTag(event,'${taskId}','${esc(tag)}')">✕</span>`;
+      pill.textContent = tag + ' ';
+      const x = document.createElement('span');
+      x.className = 'tag-pill-x';
+      x.textContent = '✕';
+      x.addEventListener('click', e => removeEpTag(e, taskId, tag));
+      pill.appendChild(x);
       sel.insertBefore(pill, ph);
     });
   }
@@ -552,11 +590,14 @@ function _refreshEpTagDd(taskId, query) {
   wrap.innerHTML = list.length
     ? list.map(tag => {
         const isSel = selected.includes(tag);
-        return `<div class="tag-option ${isSel?'selected':''}" onclick="toggleEpTag(event,'${taskId}','${esc(tag)}')">
+        return `<div class="tag-option ${isSel?'selected':''}" data-tag="${esc(tag)}">
           <div class="tag-check">${isSel?'✓':''}</div>${esc(tag)}
         </div>`;
       }).join('')
     : '<div style="padding:8px 12px;font-size:12px;color:var(--text3)">태그 없음</div>';
+  wrap.querySelectorAll('.tag-option').forEach(el => {
+    el.addEventListener('click', e => toggleEpTag(e, taskId, el.dataset.tag));
+  });
 }
 function toggleEpTagDropdown(e, taskId) {
   if (e) e.stopPropagation();
@@ -616,7 +657,12 @@ function renderEpCatMulti(taskId) {
     cats.forEach(cat => {
       const pill = document.createElement('div');
       pill.className = 'tag-pill';
-      pill.innerHTML = `${esc(cat)} <span class="tag-pill-x" onclick="removeEpCat(event,'${taskId}','${esc(cat)}')">✕</span>`;
+      pill.textContent = cat + ' ';
+      const x = document.createElement('span');
+      x.className = 'tag-pill-x';
+      x.textContent = '✕';
+      x.addEventListener('click', e => removeEpCat(e, taskId, cat));
+      pill.appendChild(x);
       sel.insertBefore(pill, ph);
     });
   }
@@ -633,11 +679,14 @@ function _refreshEpCatDd(taskId, query) {
   wrap.innerHTML = list.length
     ? list.map(cat => {
         const isSel = selected.includes(cat);
-        return `<div class="tag-option ${isSel?'selected':''}" onclick="toggleEpCat(event,'${taskId}','${esc(cat)}')">
+        return `<div class="tag-option ${isSel?'selected':''}" data-cat="${esc(cat)}">
           <div class="tag-check">${isSel?'✓':''}</div>${esc(cat)}
         </div>`;
       }).join('')
     : '<div style="padding:8px 12px;font-size:12px;color:var(--text3)">카테고리 없음</div>';
+  wrap.querySelectorAll('.tag-option').forEach(el => {
+    el.addEventListener('click', e => toggleEpCat(e, taskId, el.dataset.cat));
+  });
 }
 function toggleEpCatDropdown(e, taskId) {
   if (e) e.stopPropagation();
@@ -699,7 +748,12 @@ function renderEpLinkedTaskMulti(taskId) {
       if (!t) return;
       const pill = document.createElement('div');
       pill.className = 'tag-pill';
-      pill.innerHTML = `${esc(t.title)} <span class="tag-pill-x" onclick="removeEpLinkedTask(event,'${taskId}','${esc(tid)}')">✕</span>`;
+      pill.textContent = t.title + ' ';
+      const x = document.createElement('span');
+      x.className = 'tag-pill-x';
+      x.textContent = '✕';
+      x.addEventListener('click', e => removeEpLinkedTask(e, taskId, tid));
+      pill.appendChild(x);
       sel.insertBefore(pill, ph);
     });
   }
@@ -809,7 +863,8 @@ function addTaskLink(fromId){
 }
 function removeTaskLink(fromId, toId){
   const from = tasks.find(t => t.id === fromId), to = tasks.find(t => t.id === toId);
-  if(from) from.linkedTaskIds = (from.linkedTaskIds || []).filter(id => id !== toId);
+  if(!from) return;
+  from.linkedTaskIds = (from.linkedTaskIds || []).filter(id => id !== toId);
   if(to) to.linkedTaskIds = (to.linkedTaskIds || []).filter(id => id !== fromId);
   save(); const listEl = document.getElementById('ep-link-list-' + fromId); if(listEl) listEl.innerHTML = buildLinkList(from); const selEl = document.getElementById('ep-link-sel-' + fromId); if(selEl) selEl.innerHTML = buildLinkOptions(from); toast('연결 해제');
 }
@@ -862,7 +917,7 @@ function removeTaskContact(taskId, cid){
   save(); const listEl = document.getElementById('ep-contact-list-' + taskId); if(listEl) listEl.innerHTML = buildContactList(t); const selEl = document.getElementById('ep-contact-sel-' + taskId); if(selEl) selEl.innerHTML = buildContactOptions(t); toast('연결 해제');
 }
 
-function jumpToLinkedTask(targetId){ switchView('ledger'); setTimeout(() => { expandedId = targetId; renderLedger(); const row = document.getElementById('exp-row-' + targetId); if(row) row.scrollIntoView({behavior:'smooth', block:'center'}); }, 80); }
+function jumpToLinkedTask(targetId){ switchView('ledger'); setTimeout(() => { expandedId = targetId; _initEpState(targetId); renderLedger(); const row = document.getElementById('exp-row-' + targetId); if(row) row.scrollIntoView({behavior:'smooth', block:'center'}); }, 80); }
 function jumpToLedger(taskId) {
   // 필터 초기화 후 리스트 모드로 이동
   mselState.status.clear(); mselState.priority.clear(); mselState.cat.clear();
@@ -871,6 +926,7 @@ function jumpToLedger(taskId) {
   switchView('ledger');
   setTimeout(() => {
     expandedId = taskId;
+    _initEpState(taskId);
     renderLedger();
     const row = document.getElementById('exp-row-' + taskId);
     if (row) row.scrollIntoView({behavior:'smooth', block:'center'});
@@ -884,21 +940,8 @@ PARAMETERS  : 없음
 RETURNED    : 없음 (파일 다운로드)
 ******************************************************************************/
 function exportCSV() {
-  /* 현재 필터 상태 그대로 적용 */
-  let list = tasks.filter(t => !t.linkedSourceType);
-  const search  = (document.getElementById('ledger-search')?.value || '').trim().toLowerCase();
-  const tag     = (document.getElementById('ledger-tag')?.value   || '').trim().toLowerCase();
-  const selSt   = mselState.status;
-  const selPri  = mselState.priority;
-  const selCat  = mselState.cat;
-
-  if (search)    list = list.filter(t => t.title.toLowerCase().includes(search) || (t.memo||'').toLowerCase().includes(search));
-  if (selSt.size)  list = list.filter(t => selSt.has(t.status));
-  if (selPri.size) list = list.filter(t => selPri.has(t.priority));
-  if (selCat.size && ledgerMode !== 'group') list = list.filter(t => selCat.has(t.category));
-  if (tag)       list = list.filter(t => t.tags.some(tg => tg.toLowerCase().includes(tag)));
-
-  list = _applyLedgerSort(list);
+  /* 현재 필터 상태 그대로 적용 (renderLedger와 동일 로직 공유) */
+  let list = _applyLedgerSort(_getFilteredTasks());
 
   const headers = ['제목','카테고리','우선순위','상태','태그','시작일','마감일','완료일','메모'];
 
@@ -943,14 +986,19 @@ function copyMemo(id) {
   const ta = document.getElementById('ep-memo-' + id);
   const text = ta ? ta.value.trim() : '';
   if (!text) { toast('메모가 비어 있습니다'); return; }
-  navigator.clipboard.writeText(text)
-    .then(() => toast('메모 복사 완료'))
-    .catch(() => {
-      /* clipboard API 실패 시 폴백 */
-      ta.select();
-      document.execCommand('copy');
-      toast('메모 복사 완료');
-    });
+  /* clipboard API 미지원(비보안 컨텍스트 등) 대비 폴백 */
+  const fallback = () => {
+    ta.select();
+    document.execCommand('copy');
+    toast('메모 복사 완료');
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => toast('메모 복사 완료'))
+      .catch(fallback);
+  } else {
+    fallback();
+  }
 }
 
 document.addEventListener('click', e => { if (!e.target.closest('.msel-wrap')) { ['status','priority','cat'].forEach(t => { const dd = document.getElementById('msel-' + t + '-dd'); if (dd) dd.classList.remove('open'); }); } });

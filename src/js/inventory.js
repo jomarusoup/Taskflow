@@ -110,7 +110,10 @@ function invFlushSave() {
       delete lg.data.selected;
     }
     localStorage.setItem(INV_KEY, JSON.stringify({activeLedger:invActiveLedgerId,ledgers:invLedgers}));
-  } catch(e){}
+  } catch(e){
+    console.warn('[TASKFLOW] 인벤토리 저장 실패', e);
+    if (typeof toast === 'function') toast('저장 실패: 저장 공간을 확인하세요');
+  }
 }
 let _invTimer=null;
 function invSave(){clearTimeout(_invTimer);_invTimer=setTimeout(invFlushSave,400);}
@@ -561,7 +564,7 @@ function _invInitTabDrag(){
         dragEl.style.opacity='';
         placeholder.remove();
         const groups=[...bar.querySelectorAll('.inv-tab-group:not([style*="opacity"])')];
-        let toIdx=invSt.tabs.length-1;
+        let toIdx=invSt.tabs.length; // 맨끝 드롭 시 마지막 위치로 (미리보기와 일치)
         for(let g of groups){
           const r=g.getBoundingClientRect();
           if(ev.clientX<r.left+r.width/2){toIdx=+g.dataset.tidx;break;}
@@ -611,7 +614,7 @@ function _invInitLedgerDrag() {
         dragEl.style.opacity = '';
         placeholder.remove();
         const items = [...list.querySelectorAll('.inv-sb-item:not([style*="opacity"])')];
-        let toIdx = invLedgers.length - 1;
+        let toIdx = invLedgers.length; // 맨끝 드롭 시 마지막 위치로 (미리보기와 일치)
         for(let it of items) {
           const r = it.getBoundingClientRect();
           if(ev.clientY < r.top + r.height/2) { toIdx = +it.dataset.lidx; break; }
