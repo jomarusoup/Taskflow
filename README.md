@@ -1,142 +1,83 @@
-# 🌊 TASKFLOW — 업무관리 시스템
-
-> **v2 개발 진행 중** — Go 백엔드 + PostgreSQL + 멀티유저 + GLPI 수준 인벤토리
->
-> v1(브라우저 단독 오프라인 버전)은 [`v1-browser`](../../tree/v1-browser) 브랜치에서 유지됩니다.
-
 ---
-
-## 🎯 1. 프로젝트 목표
-
-| 버전 | 설명 | 브랜치 |
-| :--- | :--- | :--- |
-| **v1** | 브라우저 단독 실행, localStorage, 오프라인 완전 지원 | [`v1-browser`](../../tree/v1-browser) |
-| **v2** | Go 백엔드 + PostgreSQL, 멀티유저 로그인, 팀 내부 서버 배포 | `main` (현재) |
-
-### v2 핵심 목표
-
-| 항목 | 내용 |
-| :--- | :--- |
-| **백엔드** | Go 1.22 + Echo v4 |
-| **DB** | PostgreSQL 16 |
-| **인증** | JWT (Access 15분 / Refresh 14일) |
-| **인벤토리** | GLPI 수준 자산관리 (변경 이력·담당자·업무 연결) |
-| **배포** | 단일 서버, Nginx 리버스 프록시, systemd |
-| **프론트** | Vite + Vanilla JS (기존 v1 UI 재사용) |
-
+Title: task_flow
+creation: 2026-07-22
+modification: 2026-07-22
+status: "in progress"
+tags:
+ - "project"
+ - "webapp"
+aliases:
+ - "TASKFLOW"
 ---
+MOC:: [[task_flow]]
+FROM:: [[empty]]
 
-## 🏗️ 2. 기술 스택
+# TASKFLOW — 업무 관리 시스템
+
+서버·빌드·설치 없이 **`src/index.html` 파일 하나만 열면 실행**되는 단독형(offline-first)
+업무 관리 웹앱. 외부 CDN·네트워크 요청이 전혀 없어 폐쇄망(내부망·CSP 환경)에서도 그대로 쓸 수 있다.
+
+전체 기획 정본: [docs/plan/PLAN.md](docs/plan/PLAN.md)
+
+## 실행
 
 ```
-Frontend   Vite 5 + Vanilla JS (ES Modules)
-Backend    Go 1.22 + Echo v4
-Database   PostgreSQL 16
-Proxy      Nginx
-Auth       JWT (HttpOnly Refresh Cookie)
-Deploy     systemd (Docker 미사용, 추후 도입 예정)
+# 1) 가장 간단 — 파일 더블클릭
+src/index.html 을 브라우저(Chrome/Edge 권장)로 연다
+
+# 2) 또는 정적 서버로
+cd src && python3 -m http.server 8000   # → http://localhost:8000
 ```
 
----
+빌드 단계 없음. 별도 의존성 없음.
 
-## 📂 3. 프로젝트 구조
+## 기능
+
+| 뷰 | 설명 |
+| --- | --- |
+| **대시보드** | KPI 카드(활성/진행/완료/기한초과) + 월간 캘린더, 일정 표시 |
+| **칸반 보드** | 상태별(To Do·In Progress·Done) 드래그 이동 |
+| **업무 대장** | 전체 업무 목록·그룹 뷰, 카테고리/태그/우선순위 관리 |
+| **인벤토리** | 다중 탭 관리 대장(서버·자산 등) 표 형태 관리 |
+| **연락처** | 담당자·부서 연락처, 업무와 연결 |
+| **백업** | 전체 데이터 JSON 내보내기/가져오기, 백업 주기 알림 |
+| **설정** | 카테고리·태그·상태·우선순위·테마·폰트 커스터마이즈 |
+
+## 데이터 저장
+
+- 모든 데이터는 브라우저 **IndexedDB**(앱 전용 DB `taskflow_store`)에 자동 저장된다.
+  앱 전용 네임스페이스라 같은 브라우저의 다른 사이트/앱과 충돌하지 않는다.
+- 데이터 구조는 JSON이며, **백업 메뉴에서 `.json` 파일로 내보내기·가져오기**가 가능하다
+  → 다른 PC·브라우저로 그대로 이식·백업.
+- 이전 버전(localStorage)의 데이터가 있으면 최초 실행 시 자동 이전한다.
+
+## 구조
 
 ```
-taskflow/
-├── backend/                   # Go API 서버
-│   ├── cmd/api/main.go
-│   ├── internal/
-│   │   ├── auth/              # JWT 발급·검증·미들웨어
-│   │   ├── models/            # DB 구조체
-│   │   ├── handlers/          # Echo 라우트 핸들러
-│   │   ├── repository/        # DB 접근 계층
-│   │   └── service/           # 비즈니스 로직
-│   ├── migrations/            # SQL 마이그레이션
-│   └── go.mod
-│
-├── frontend/                  # Vite 프론트엔드
-│   ├── src/
-│   │   ├── js/                # v1에서 이전한 모듈 (모듈화)
-│   │   ├── css/style.css
-│   │   ├── api/               # 백엔드 API 통신 레이어
-│   │   └── index.html
-│   ├── dist/                  # 빌드 결과 (Nginx 제공)
-│   └── package.json
-│
-├── docs/
-│   ├── setup-guide/           # 📚 환경 구성 가이드 (아래 참조)
-│   └── DESIGN.md
-│
-├── src/                       # v1 소스 (v1-browser 브랜치 기준)
-├── CLAUDE.md                  # Claude Code 지시서
-├── HANDOFF.md                 # AI 간 작업 인계 기록
-└── .mcp.json                  # MCP 서버 설정
+task_flow/
+├── src/                # 앱 본체 (단독 실행)
+│   ├── index.html      # 엔트리포인트 (이 파일을 연다)
+│   ├── css/style.css
+│   └── js/
+│       ├── store.js    # 저장 계층 (IndexedDB, 자동저장·마이그레이션)
+│       ├── core.js     # 전역 상태·데이터 로드·공통 유틸
+│       ├── app.js      # 초기화·네비게이션·렌더 오케스트레이션
+│       ├── calendar.js kanban.js ledger.js inventory.js contacts.js
+│       ├── modal.js data.js ui.js backup.js
+├── docs/               # 기획·작업·이슈 (arachne 노트)
+│   └── plan/PLAN.md    # 전체 기획 정본
+├── taskflow.pen        # UI 디자인 (Pencil)
+├── AGENTS.md           # 프로젝트 규약 정본(SSOT)
+└── CLAUDE.md           # Claude Code 전용 보충
 ```
 
----
+## 기술 스택
 
-## 🚀 4. Quick Start
+- Vanilla JavaScript (프레임워크·번들러 없음), HTML, CSS
+- 저장: IndexedDB / 이식: JSON export·import
+- 외부 의존성·CDN 없음 (폐쇄망 대응)
 
-### 환경 구성 가이드
+## 개발
 
-상세 설치·설정은 각 가이드를 참조하세요.
-
-| 가이드 | 내용 |
-| :--- | :--- |
-| [📦 Client 환경 구성](docs/setup-guide/client-guide/README.md) | Node.js, Vite 설정, 빌드, API 연동 |
-| [🖥️ Server 환경 구성](docs/setup-guide/server-guide/README.md) | Go 설치, Nginx, systemd, 배포 |
-| [🗄️ DB 환경 구성](docs/setup-guide/DB-guide/README.md) | PostgreSQL 설치, 스키마, 마이그레이션, 백업 |
-| [🤖 AI 도구 환경 구성](docs/setup-guide/AI-guide/README.md) | Claude Code, Gemini CLI, MCP 설치, 훅·커맨드 |
-
-### 빠른 실행 순서
-
-```bash
-# 1. 소스 클론
-git clone https://github.com/jomarusoup/Taskflow.git
-cd Taskflow
-
-# 2. DB 스키마 적용 (PostgreSQL 설치 후)
-psql -U taskflow -d taskflow -h 127.0.0.1 -f backend/migrations/001_init.sql
-
-# 3. 백엔드 빌드 및 실행
-cd backend && go mod tidy && go build -o bin/taskflow ./cmd/api
-./bin/taskflow
-
-# 4. 프론트엔드 빌드
-cd ../frontend && npm install && npm run build
-
-# 5. Nginx 재시작
-sudo systemctl restart nginx
-```
-
----
-
-## 📅 5. 주요 기능
-
-| 기능 | 설명 |
-| :--- | :--- |
-| **대시보드** | 캘린더 연동, 주간·월간·연간 업무, 기한 초과·오늘 마감 퀵 패널 |
-| **칸반 보드** | 드래그 앤 드롭 상태 관리 |
-| **업무 대장** | 필터링·정렬·그룹뷰, 다중 카테고리·태그, 연결 업무, CSV 내보내기 |
-| **연락처** | 담당자 관리, 업무 연결, 카테고리별 정·부 구분 |
-| **인벤토리** | 다중 원장·탭·컬럼 커스텀, 자산 변경 이력 (v2 확장 예정) |
-| **멀티유저** | JWT 로그인, 역할(admin·member) 구분 (v2) |
-
----
-
-## 🤖 6. AI 협업 워크플로
-
-이 프로젝트는 **Claude Code**와 **Gemini CLI**가 역할을 분담하여 협업합니다.
-
-| 에이전트 | 담당 |
-| :--- | :--- |
-| **Claude Code** | 코드 구현, 버그 수정, `.claude/` 설정 관리, MCP 도구 |
-| **Gemini CLI** | 기능 기획, 설계 문서, README 갱신, 아이디어 탐색 |
-
-AI 도구 설치·설정 방법: [AI-guide](docs/setup-guide/AI-guide/README.md)
-
-### 협업 프로토콜
-
-1. **HANDOFF.md** — Claude ↔ Gemini 전환 시 작업 상태 인계
-2. **세션 훅** — 세션 시작·종료 시 자동 스냅샷 저장
-3. **CLAUDE.md** — Claude 전용 프로젝트 지시서 (규칙·구조·주의사항)
+프로젝트 규약은 [AGENTS.md](AGENTS.md)가 정본이다. 코드 작업은 Claude Code 기준.
+UI 디자인은 [taskflow.pen](taskflow.pen)(Pencil)에서 관리한다.
