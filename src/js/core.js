@@ -1,6 +1,6 @@
 /******************************************************************************
 FILE NAME   : core.js
-DESCRIPTION : 전역 상태 관리, localStorage 데이터 계층, 공통 유틸리티 함수
+DESCRIPTION : 전역 상태 관리, 번들 하이드레이션(load), 공통 유틸리티 함수
 DATA        : 2026-04-20
 Modification: 2026-04-20
 ******************************************************************************/
@@ -10,17 +10,9 @@ window.addEventListener('unhandledrejection', e => {
   console.warn('[TASKFLOW]', e.reason);
 });
 
-// ── STORAGE KEYS ──────────────────────────────────────
-const TASK_KEY      = 'taskflow_v3';
-const SETTINGS_KEY  = 'taskflow_settings_v1';
-const THEME_KEY     = 'taskflow_theme';
-const FONT_KEY      = 'taskflow_font';
-const RECURRING_KEY = 'taskflow_recurring_v1';
-const ANNUAL_KEY    = 'taskflow_annual_v1';
-const CONTACT_KEY   = 'taskflow_contacts_v1';
-const SCHEDULE_KEY  = 'taskflow_schedules_v1';
-
 // ── STATE ─────────────────────────────────────────────
+// 데이터 영속은 store.js(File System Access API + data.json)가 전담한다.
+// 저장은 persistStore(), 로드는 g_Bundle 하이드레이션을 경유한다.
 let tasks = [];
 let settings = {
   categories: ['FEP운영','OMS운영','개발','보고','자격증','기타'],
@@ -60,40 +52,43 @@ let schedules      = []; // {id,title,date,startTime,endTime,color,memo}
 // ── DATA LAYER ────────────────────────────────────────
 /******************************************************************************
 FUNCTION    : load
-DESCRIPTION : localStorage에서 모든 데이터를 읽어 전역 변수에 초기화.
+DESCRIPTION : store.js가 로드한 g_Bundle에서 모든 데이터를 읽어 전역 변수에 초기화.
               스키마 마이그레이션(assigneeIds, categoryRoles 등)도 함께 수행
 RETURNED    : void
 ******************************************************************************/
 function load() {
-  try { tasks = JSON.parse(localStorage.getItem(TASK_KEY)) || []; } catch { tasks = []; }
-  try {
-    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
-    if (s) {
-      if (s.categories) settings.categories = s.categories;
-      if (s.tags)       settings.tags       = s.tags;
-      if (s.priorities) settings.priorities = s.priorities;
-      if (s.statuses) {
-        settings.statuses = s.statuses;
-        // migrate: ensure showInKanban and color exist
-        const defaultColors = {todo:'#5E6C88',inprogress:'#6AADFF',done:'#3DDC97',archived:'#3E4A5E'};
-        settings.statuses.forEach(st => {
-          if (st.showInKanban === undefined) st.showInKanban = (st.key !== 'archived');
-          if (st.showInCalendar === undefined) st.showInCalendar = (st.key !== 'archived');
-          if (!st.color) st.color = defaultColors[st.key] || '#888888';
-        });
-      }
+  const b = (typeof g_Bundle === 'object' && g_Bundle) ? g_Bundle : {};
+  tasks = Array.isArray(b.tasks) ? b.tasks : [];
+  const s = b.settings;
+  if (s) {
+    if (s.categories) settings.categories = s.categories;
+    if (s.tags)       settings.tags       = s.tags;
+    if (s.priorities) settings.priorities = s.priorities;
+    if (s.statuses) {
+      settings.statuses = s.statuses;
+      // migrate: ensure showInKanban and color exist
+      const defaultColors = {todo:'#5E6C88',inprogress:'#6AADFF',done:'#3DDC97',archived:'#3E4A5E'};
+      settings.statuses.forEach(st => {
+        if (st.showInKanban === undefined) st.showInKanban = (st.key !== 'archived');
+        if (st.showInCalendar === undefined) st.showInCalendar = (st.key !== 'archived');
+        if (!st.color) st.color = defaultColors[st.key] || '#888888';
+      });
     }
-  } catch {}
-  try { recurringTasks = JSON.parse(localStorage.getItem(RECURRING_KEY)) || []; } catch { recurringTasks = []; }
-  try { annualTasks    = JSON.parse(localStorage.getItem(ANNUAL_KEY))    || []; } catch { annualTasks = []; }
-  try { contacts       = JSON.parse(localStorage.getItem(CONTACT_KEY))   || []; } catch { contacts = []; }
-  try { schedules      = JSON.parse(localStorage.getItem(SCHEDULE_KEY))  || []; } catch { schedules = []; }
+  }
+  recurringTasks = Array.isArray(b.recurring) ? b.recurring : [];
+  annualTasks    = Array.isArray(b.annual)    ? b.annual    : [];
+  contacts       = Array.isArray(b.contacts)  ? b.contacts  : [];
+  schedules      = Array.isArray(b.schedules) ? b.schedules : [];
   try {
     const _invRaw = invLoadData();
     invLedgers = _invRaw.ledgers;
     invActiveLedgerId = _invRaw.activeLedger;
     invSt = invMakeState(invLedgers.find(l=>l.id===invActiveLedgerId)?.data || _invRaw.ledgers[0].data);
   } catch(e) { console.warn('inv init error',e); invLedgers=[]; invActiveLedgerId=null; invSt=null; }
+  // UI(테마·폰트) 및 백업 메타 초기화
+  g_UiTheme    = (b.ui && b.ui.theme) || 'dark';
+  g_UiFont     = (b.ui && b.ui.font)  || 'system';
+  g_BackupMeta = b.backupMeta || {lastBackup:null, interval:7};
   // migrate: ensure linkedTaskIds exists
   tasks.forEach(t => {
     if (!t.linkedTaskIds) t.linkedTaskIds = [];
@@ -107,12 +102,12 @@ function load() {
     if (!c.categoryRoles) c.categoryRoles = c.categories.map(cat => ({category: cat, role: c.type || 'main'}));
   });
 }
-/* 각 데이터 유형을 localStorage에 저장하는 단순 래퍼 */
-function save()           { localStorage.setItem(TASK_KEY,      JSON.stringify(tasks)); }
-function saveSettings()   { localStorage.setItem(SETTINGS_KEY,  JSON.stringify(settings)); }
-function saveRecurring()  { localStorage.setItem(RECURRING_KEY, JSON.stringify(recurringTasks)); }
-function saveAnnual()     { localStorage.setItem(ANNUAL_KEY,    JSON.stringify(annualTasks)); }
-function saveContacts()   { localStorage.setItem(CONTACT_KEY,   JSON.stringify(contacts)); }
+/* 각 데이터 유형 저장 래퍼 — 모두 store.js의 persistStore()로 위임(파일 자동저장) */
+function save()           { persistStore(); }
+function saveSettings()   { persistStore(); }
+function saveRecurring()  { persistStore(); }
+function saveAnnual()     { persistStore(); }
+function saveContacts()   { persistStore(); }
 
 // ── ID GENERATION: 순번 기반 (0, 1, 2, ...)
 let _idCounter = -1;

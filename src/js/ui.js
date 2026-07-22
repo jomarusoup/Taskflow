@@ -2,10 +2,15 @@
  * ui.js - 공통 UI 요소 (테마, 폰트, 토스트, 시계, 마크다운, 공통 섹션 토글)
  */
 
+// ── THEME / FONT 상태 (파일 번들에 저장) ──────────────
+let g_UiTheme = 'dark';
+let g_UiFont  = 'system';
+
 // ── THEME ─────────────────────────────────────────────
 function applyTheme(theme){
   document.documentElement.setAttribute('data-theme',theme);
-  localStorage.setItem(THEME_KEY,theme);
+  g_UiTheme = theme;
+  persistStore();
   const isDark=theme==='dark';
   const icon = document.getElementById('theme-icon');
   const label = document.getElementById('theme-label');
@@ -28,16 +33,17 @@ function applyFont(key) {
   const f = FONTS.find(x => x.key === key) || FONTS[0];
   document.documentElement.style.setProperty('--sans', f.sans);
   document.documentElement.style.setProperty('--mono', f.mono);
-  localStorage.setItem(FONT_KEY, key);
+  g_UiFont = f.key;
+  persistStore();
   // 드롭다운 동기화
   const sel = document.getElementById('font-select');
-  if (sel) sel.value = key;
+  if (sel) sel.value = f.key;
 }
 
 function renderFontSelect() {
   const sel = document.getElementById('font-select');
   if (!sel) return;
-  const cur = localStorage.getItem(FONT_KEY) || 'system';
+  const cur = g_UiFont || 'system';
   sel.innerHTML = FONTS.map(f => `<option value="${f.key}" ${cur===f.key?'selected':''}>${f.label}</option>`).join('');
   sel.value = cur;
 }

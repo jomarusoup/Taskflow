@@ -2,13 +2,11 @@
  * backup.js - 데이터 백업 및 복원 (JSON)
  */
 
-const BACKUP_KEY = 'taskflow_backup_meta';
+// 백업 메타는 파일 번들(g_BackupMeta)에 함께 저장된다. load()에서 초기화됨.
+let g_BackupMeta = {lastBackup:null, interval:7};
 
-function loadBackupMeta() {
-  try { return JSON.parse(localStorage.getItem(BACKUP_KEY)) || {lastBackup:null, interval:7}; }
-  catch { return {lastBackup:null, interval:7}; }
-}
-function saveBackupMeta(meta) { localStorage.setItem(BACKUP_KEY, JSON.stringify(meta)); }
+function loadBackupMeta() { return g_BackupMeta || {lastBackup:null, interval:7}; }
+function saveBackupMeta(meta) { g_BackupMeta = meta; persistStore(); }
 
 async function doBackup() {
   const payload = {tasks, settings, recurringTasks, annualTasks, contacts, schedules};

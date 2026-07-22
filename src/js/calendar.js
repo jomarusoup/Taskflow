@@ -419,7 +419,7 @@ function closeCalDetail(){calSelectedDate=null; const det = document.getElementB
 
 // ── SCHEDULES ──
 function schGenId(){ return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
-function saveSch(){ localStorage.setItem(SCHEDULE_KEY, JSON.stringify(schedules)); }
+function saveSch(){ persistStore(); }
 
 const SCH_COLORS = ['#6aabdb','#4dba8a','#8c82d8','#d8758a','#d4a030','#d47050','#f87171','#a3e635'];
 

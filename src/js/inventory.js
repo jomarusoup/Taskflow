@@ -2,7 +2,7 @@
  * inventory.js - 인벤토리 관리 시스템
  */
 
-const INV_KEY = 'taskflow_inventory_v3';
+// 인벤토리 데이터는 파일 번들(g_Bundle.inventory)에 저장된다. store.js가 영속 전담.
 function invGenId() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
 function invClone(o) { return JSON.parse(JSON.stringify(o)); }
 
@@ -57,28 +57,28 @@ let invSt = null; // runtime state for active ledger
 // ── Load / Save ──
 function invLoadData() {
   try {
-    const raw3 = localStorage.getItem(INV_KEY);
-    if (raw3) { const d=JSON.parse(raw3); if(d&&d.ledgers?.length) return d; }
-    // migrate v2: [{id,name,columns,rows,memo,...}]
-    const raw2 = localStorage.getItem('taskflow_inventory_v2');
-    if (raw2) {
-      const oldTabs = JSON.parse(raw2);
-      if (Array.isArray(oldTabs) && oldTabs.length) {
-        const ledgers = oldTabs.map(t => {
-          const tid=invGenId(), bc0=invGenId(), bc1=invGenId();
-          return { id:invGenId(), name:t.name, data:{
-            activeTab:0, colWidths:{}, rowHeights:{}, hiddenCols:[], tabMemos:{[tid]:t.memo||''},
-            baseCols:[{id:bc0,name:'No',type:'text',nodels:true},{id:bc1,name:'항목명',type:'text',nodels:true}],
-            tabs:[{id:tid,name:'정보',cols:(t.columns||[]).map(c=>({id:c.id,name:c.name,type:c.type||'text',statuses:c.statuses}))}],
-            rows:(t.rows||[]).map((r,i)=>({id:r.id,base:{[bc0]:String(i+1).padStart(3,'0'),[bc1]:''},data:{[tid]:r.cells||{}}}))
-          }};
-        });
-        const d={activeLedger:ledgers[0].id,ledgers};
-        localStorage.setItem(INV_KEY,JSON.stringify(d)); return d;
-      }
-    }
-  } catch(e){console.warn('invLoadData',e);}
-  // default
+    const inv = (typeof g_Bundle === 'object' && g_Bundle) ? g_Bundle.inventory : null;
+    if (inv && Array.isArray(inv.ledgers) && inv.ledgers.length) return inv;
+  } catch(e){ console.warn('invLoadData',e); }
+  return invDefaultData();
+}
+
+/* 레거시 v2 인벤토리 배열([{id,name,columns,rows,memo}])을 v3 구조로 변환 */
+function invConvertV2(oldTabs) {
+  const ledgers = oldTabs.map(t => {
+    const tid=invGenId(), bc0=invGenId(), bc1=invGenId();
+    return { id:invGenId(), name:t.name, data:{
+      activeTab:0, colWidths:{}, rowHeights:{}, hiddenCols:[], tabMemos:{[tid]:t.memo||''},
+      baseCols:[{id:bc0,name:'No',type:'text',nodels:true},{id:bc1,name:'항목명',type:'text',nodels:true}],
+      tabs:[{id:tid,name:'정보',cols:(t.columns||[]).map(c=>({id:c.id,name:c.name,type:c.type||'text',statuses:c.statuses}))}],
+      rows:(t.rows||[]).map((r,i)=>({id:r.id,base:{[bc0]:String(i+1).padStart(3,'0'),[bc1]:''},data:{[tid]:r.cells||{}}}))
+    }};
+  });
+  return {activeLedger:ledgers[0].id, ledgers};
+}
+
+/* 인벤토리 기본 샘플 대장 생성(신규 파일·빈 데이터 시) */
+function invDefaultData() {
   const lid=invGenId(),t0=invGenId(),t1=invGenId(),bc0=invGenId(),bc1=invGenId();
   const tc={t0c0:invGenId(),t0c1:invGenId(),t0c2:invGenId(),t0c3:invGenId(),t1c0:invGenId(),t1c1:invGenId(),t1c2:invGenId(),t1c3:invGenId()};
   const r0=invGenId(),r1=invGenId(),r2=invGenId();
@@ -101,7 +101,8 @@ function invMakeState(raw) {
   return {...raw, hiddenCols:new Set(raw.hiddenCols||[]), selected:new Set(), filters:{}, sortCol:null};
 }
 
-function invFlushSave() {
+/* 런타임 상태(invSt)를 활성 대장 데이터로 동기화 — 파일 저장 직전 호출됨 */
+function invSyncActive() {
   try {
     const lg = invLedgers.find(l=>l.id===invActiveLedgerId);
     if (lg && invSt) {
@@ -109,9 +110,10 @@ function invFlushSave() {
         filters:Object.fromEntries(Object.entries(invSt.filters||{}).map(([k,v])=>[k,v?[...v]:null])), sortCol:invSt.sortCol||null};
       delete lg.data.selected;
     }
-    localStorage.setItem(INV_KEY, JSON.stringify({activeLedger:invActiveLedgerId,ledgers:invLedgers}));
   } catch(e){}
 }
+
+function invFlushSave() { invSyncActive(); persistStore(); }
 let _invTimer=null;
 function invSave(){clearTimeout(_invTimer);_invTimer=setTimeout(invFlushSave,400);}
 window.addEventListener('beforeunload',invFlushSave);

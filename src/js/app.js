@@ -100,11 +100,17 @@ document.addEventListener('keydown', e => {
 });
 
 // ── INIT ──────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+/******************************************************************************
+FUNCTION    : startApp
+DESCRIPTION : store.js가 데이터 파일을 로드(g_Bundle 준비)한 뒤 호출되는 앱 초기화.
+              데이터 하이드레이션·테마·렌더·이벤트 배선·샘플 데이터 시딩을 수행
+RETURNED    : void
+******************************************************************************/
+function startApp() {
   load();
   initIdCounter();
-  applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
-  applyFont(localStorage.getItem(FONT_KEY) || 'system');
+  applyTheme(g_UiTheme || 'dark');
+  applyFont(g_UiFont || 'system');
   updateClock();
   setInterval(updateClock, 1000);
   renderAll();
@@ -142,4 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ].forEach(s => createTask(s));
     renderAll();
   }
-});
+}
+
+// 진입점: 데이터 파일 선택 게이트 → 로드 완료 시 startApp() 호출(store.js)
+document.addEventListener('DOMContentLoaded', () => { bootStore(); });
