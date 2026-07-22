@@ -105,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initIdCounter();
   applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
   applyFont(localStorage.getItem(FONT_KEY) || 'system');
+  applySidebar(loadSidebarState(), true); // 저장된 접힘 상태 복원 (transition 없이)
   updateClock();
   setInterval(updateClock, 1000);
   renderAll();

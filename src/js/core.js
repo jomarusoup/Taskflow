@@ -19,6 +19,7 @@ const RECURRING_KEY = 'taskflow_recurring_v1';
 const ANNUAL_KEY    = 'taskflow_annual_v1';
 const CONTACT_KEY   = 'taskflow_contacts_v1';
 const SCHEDULE_KEY  = 'taskflow_schedules_v1';
+const SIDEBAR_KEY   = 'taskflow_sidebar_v1';
 
 // ── STATE ─────────────────────────────────────────────
 let tasks = [];

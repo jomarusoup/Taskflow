@@ -14,6 +14,37 @@ function applyTheme(theme){
 }
 function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');}
 
+// ── SIDEBAR COLLAPSE ──────────────────────────────────
+/* loadSidebarState: 저장된 사이드바 상태 반환 ('open'|'collapsed') */
+function loadSidebarState(){
+  try { return JSON.parse(localStorage.getItem(SIDEBAR_KEY)) === 'collapsed' ? 'collapsed' : 'open'; }
+  catch { return 'open'; }
+}
+
+/* applySidebar: 접힘 상태 적용·저장. instant=true면 transition 억제 (로드 플래시 방지) */
+function applySidebar(state, instant){
+  const sb = document.getElementById('sidebar');
+  if (!sb) return;
+  if (instant) sb.classList.add('no-transition');
+  const collapsed = state === 'collapsed';
+  sb.classList.toggle('collapsed', collapsed);
+  const icon = document.getElementById('sidebar-toggle-icon');
+  const btn  = document.getElementById('sidebar-toggle');
+  if (icon) icon.textContent = collapsed ? '»' : '«';
+  if (btn)  btn.title = collapsed ? '사이드바 펼치기' : '사이드바 접기';
+  safeSetItem(SIDEBAR_KEY, state);
+  // 2중 rAF: collapsed 적용 프레임 이후에 no-transition 해제 (즉시 적용 보장)
+  if (instant) requestAnimationFrame(() => requestAnimationFrame(() => sb.classList.remove('no-transition')));
+}
+
+/* toggleSidebar: 접힘 상태 반전. 전환 완료 후 캘린더 이벤트 바 재계산 (레이아웃 폭 변동 대응) */
+function toggleSidebar(){
+  const sb = document.getElementById('sidebar');
+  const next = sb && sb.classList.contains('collapsed') ? 'open' : 'collapsed';
+  applySidebar(next, false);
+  setTimeout(() => { if (typeof renderCalendar === 'function') renderCalendar(); }, 230); // width transition(.2s) 종료 후
+}
+
 // ── FONT ──────────────────────────────────────────────
 const FONTS = [
   { key: 'system',    label: '시스템 기본',    sans: '-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif', mono: 'Consolas,"D2Coding",Menlo,"Courier New",monospace' },

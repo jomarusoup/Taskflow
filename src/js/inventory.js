@@ -1,60 +1,44 @@
-/**
- * inventory.js - 인벤토리 관리 시스템
- */
+/******************************************************************************
+FILE NAME   : inventory.js
+DESCRIPTION : 인벤토리 관리 시스템 — 다중 대장·탭·고정열 그리드 (스크롤 재설계판)
+              단일 스크롤 컨테이너(.invt-scroll) 안의 단일 테이블 +
+              border-collapse:separate + position:sticky 고정헤더/고정열.
+              열 너비는 state(colWidths)가 단일 진실원본이며 _invtApplyWidths()가
+              colgroup·table width·sticky left를 일괄 반영한다 (DOM 실측 없음).
+DATA        : 2026-04-20
+Modification: 2026-07-22
+******************************************************************************/
 
-const INV_KEY = 'taskflow_inventory_v3';
-function invGenId() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
-function invClone(o) { return JSON.parse(JSON.stringify(o)); }
-
+// ── 상수 ──────────────────────────────────────────────
+const INV_KEY   = 'taskflow_inventory_v3';
+const INV_CHK_W = 52;  /* 체크박스 고정열 너비(px) */
+const INV_MIN_W = 60;  /* 열 최소 너비(px) */
+const INV_MAX_W = 600; /* 열 최대 너비(px, 자동 계산 상한) */
 const INV_DEFAULT_ST = [
   {label:'정상',color:'#4caf50'},{label:'경고',color:'#ff9800'},
   {label:'오류',color:'#f44336'},{label:'유휴',color:'#9e9e9e'},{label:'N/A',color:'#cccccc'},
 ];
 const INV_PAL = ['#6aabdb','#4dba8a','#8c82d8','#d8758a','#d4a030','#d47050','#6aaa40','#d06060'];
 
-const INV_OSPF_ST = [
-  {label:'Full',color:'#4caf50'},{label:'Loading',color:'#2196f3'},
-  {label:'2-Way',color:'#ffc107'},{label:'ExStart',color:'#ff9800'},
-  {label:'Down',color:'#f44336'},{label:'Attempt',color:'#9e9e9e'},{label:'Init',color:'#cccccc'},
-];
-
-function invGetOSPFData() {
-  const tid = invGenId(), bc0 = invGenId(), bc1 = invGenId();
-  const c = {
-    area: invGenId(), rid: invGenId(), iface: invGenId(), ip: invGenId(), 
-    cost: invGenId(), pri: invGenId(), st: invGenId(), nbr: invGenId()
-  };
-  return {
-    activeTab: 0, colWidths: {}, rowHeights: {}, hiddenCols: [], tabMemos: {},
-    baseCols: [{id: bc0, name: 'No', type: 'text', nodels: true}, {id: bc1, name: '라우터명', type: 'text', nodels: true}],
-    tabs: [{
-      id: tid, name: 'OSPF 설정',
-      cols: [
-        {id: c.area, name: 'Area', type: 'text'},
-        {id: c.rid,  name: 'Router ID', type: 'text'},
-        {id: c.iface,name: 'Interface', type: 'text'},
-        {id: c.ip,   name: 'IP Address', type: 'text'},
-        {id: c.cost, name: 'Cost', type: 'text'},
-        {id: c.st,   name: 'State', type: 'status', statuses: invClone(INV_OSPF_ST)},
-        {id: c.nbr,  name: 'Neighbor ID', type: 'text'}
-      ]
-    }],
-    rows: [
-      {id: invGenId(), base: {[bc0]:'001', [bc1]:'Core-R1'}, data: {[tid]: {[c.area]:'0', [c.rid]:'1.1.1.1', [c.iface]:'Gi0/0', [c.st]:'Full'}}},
-      {id: invGenId(), base: {[bc0]:'002', [bc1]:'Edge-R1'}, data: {[tid]: {[c.area]:'1', [c.rid]:'2.2.2.2', [c.iface]:'Gi0/1', [c.st]:'Full'}}}
-    ]
-  };
-}
-
+// ── 유틸 ──────────────────────────────────────────────
+function invGenId() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+function invClone(o) { return JSON.parse(JSON.stringify(o)); }
 function invHexRgb(h){return{r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)};}
 function invAlpha(h,a){const{r,g,b}=invHexRgb(h);return`rgba(${r},${g},${b},${a})`;}
 function invLightBg(hex){const{r,g,b}=invHexRgb(hex);const m=c=>Math.round(c*.2+255*.8);const t=n=>n.toString(16).padStart(2,'0');return'#'+t(m(r))+t(m(g))+t(m(b));}
 
-let invLedgers = [];
+// ── 전역 상태 ─────────────────────────────────────────
+let invLedgers        = [];
 let invActiveLedgerId = null;
-let invSt = null; // runtime state for active ledger
+let invSt             = null; /* 활성 대장의 런타임 상태 */
 
-// ── Load / Save ──
+// ── Load / Save ───────────────────────────────────────
+/******************************************************************************
+FUNCTION    : invLoadData
+DESCRIPTION : localStorage(taskflow_inventory_v3)에서 인벤토리 로드.
+              v2 데이터 마이그레이션, 데이터 없으면 기본 대장 생성
+RETURNED    : object - {activeLedger, ledgers[]}
+******************************************************************************/
 function invLoadData() {
   try {
     const raw3 = localStorage.getItem(INV_KEY);
@@ -97,11 +81,20 @@ function invLoadData() {
   }}]};
 }
 
+/* invMakeState: 저장 데이터 → 런타임 상태 (hiddenCols/selected를 Set으로) */
 function invMakeState(raw) {
+  if (!raw) return null;
   return {...raw, hiddenCols:new Set(raw.hiddenCols||[]), selected:new Set(), filters:{}, sortCol:null};
 }
 
+/******************************************************************************
+FUNCTION    : invFlushSave
+DESCRIPTION : 런타임 상태를 직렬화해 활성 대장에 반영 후 localStorage 저장.
+              쓰기 실패(quota 등)는 경고 + toast로 표면화
+RETURNED    : 없음
+******************************************************************************/
 function invFlushSave() {
+  if (!invLedgers || !invLedgers.length) return; /* 초기화 실패 시 기존 데이터 덮어쓰기 방지 */
   try {
     const lg = invLedgers.find(l=>l.id===invActiveLedgerId);
     if (lg && invSt) {
@@ -119,20 +112,69 @@ let _invTimer=null;
 function invSave(){clearTimeout(_invTimer);_invTimer=setTimeout(invFlushSave,400);}
 window.addEventListener('beforeunload',invFlushSave);
 
-// ── Helpers ──
+// ── 데이터 헬퍼 ───────────────────────────────────────
 function invCurTab(){return invSt.tabs[invSt.activeTab]||invSt.tabs[0];}
 function invFindCol(cid){for(const c of invSt.baseCols)if(c.id===cid)return c;for(const t of invSt.tabs)for(const c of t.cols)if(c.id===cid)return c;return null;}
-function invAutoW(cid){const col=invFindCol(cid);if(!col)return 80;const isBase=!!invSt.baseCols.find(c=>c.id===cid);const lens=[];if(isBase){invSt.rows.forEach(r=>(r.base[cid]||'').split('\n').forEach(l=>lens.push(l.length)));}else{const tid=invCurTab().id;invSt.rows.forEach(r=>((r.data?.[tid]?.[cid])||'').split('\n').forEach(l=>lens.push(l.length)));}return Math.max(60,Math.max(col.name.length,...lens)*8+24);}
-function invGetW(cid){return invSt.colWidths[cid]||invAutoW(cid);}
-function invGetH(rid){return invSt.rowHeights[rid]||32;}
-function invCellVal(row,cid){const isB=!!invSt.baseCols.find(c=>c.id===cid);return isB?(row.base[cid]||''):((row.data?.[invCurTab().id]?.[cid])||'');}
+function invIsBase(cid){return !!invSt.baseCols.find(c=>c.id===cid);}
+function invVisBaseCols(){return invSt.baseCols.filter(c=>!invSt.hiddenCols.has(c.id));}
+function invVisTabCols(){const t=invCurTab();return t?t.cols.filter(c=>!invSt.hiddenCols.has(c.id)):[];}
+function invCellVal(row,cid){return invIsBase(cid)?(row.base[cid]||''):((row.data?.[invCurTab().id]?.[cid])||'');}
 function invUniqVals(cid){const s=new Set();invSt.rows.forEach(r=>{const v=invCellVal(r,cid).trim();s.add(v||'(빈값)');});return[...s].sort((a,b)=>a.localeCompare(b,'ko'));}
 function invFilteredRows(){const f=invSt.filters||{};let rows=invSt.rows.filter(row=>{for(const cid in f){if(!f[cid])continue;const v=invCellVal(row,cid).trim()||'(빈값)';if(!f[cid].has(v))return false;}return true;});if(invSt.sortCol){const{cid,dir}=invSt.sortCol;rows=[...rows].sort((a,b)=>{const va=invCellVal(a,cid),vb=invCellVal(b,cid);return dir==='asc'?va.localeCompare(vb,'ko',{numeric:true}):vb.localeCompare(va,'ko',{numeric:true});});}return rows;}
 function invHasFilter(){return Object.values(invSt.filters||{}).some(v=>v!=null)||!!invSt.sortCol;}
 function invReorderNo(){const nc=invSt.baseCols.find(c=>c.nodels);if(!nc)return;invSt.rows.forEach((r,i)=>{r.base[nc.id]=String(i+1).padStart(3,'0');});}
 function invCloseFloats(){document.querySelectorAll('.inv-flt-popup,.inv-ctx-menu').forEach(e=>e.remove());}
 
-// ── Render ──
+// ── 열 너비 / 고정열 레이아웃 엔진 ────────────────────
+/******************************************************************************
+FUNCTION    : invAutoW
+DESCRIPTION : 열 내용 기반 자동 너비 계산 (전각문자는 2단위로 가중)
+PARAMETERS  : string cid - 열 ID
+RETURNED    : number - 너비(px, INV_MIN_W~INV_MAX_W)
+******************************************************************************/
+function invAutoW(cid){
+  const col=invFindCol(cid); if(!col) return 80;
+  const wide=s=>[...String(s)].reduce((a,ch)=>a+(ch.charCodeAt(0)>127?2:1),0);
+  const isB=invIsBase(cid), tid=invCurTab()?invCurTab().id:null;
+  let max=wide(col.name)+3; /* 헤더는 드래그핸들·필터버튼 공간 가산 */
+  invSt.rows.forEach(r=>{
+    const v=isB?(r.base[cid]||''):((r.data?.[tid]?.[cid])||'');
+    String(v).split('\n').forEach(l=>{const w=wide(l);if(w>max)max=w;});
+  });
+  return Math.min(INV_MAX_W, Math.max(INV_MIN_W, max*7+30));
+}
+function invGetW(cid){return invSt.colWidths[cid]||invAutoW(cid);}
+
+/******************************************************************************
+FUNCTION    : _invtLayout
+DESCRIPTION : 현재 표시 열 목록·고정열 left 오프셋·테이블 총 너비 계산.
+              state의 열 너비만 사용 — DOM 실측 없음 (단일 진실원본)
+RETURNED    : object - {bc:공통열[], tc:탭열[], lefts:고정열 left[], total:총너비}
+******************************************************************************/
+function _invtLayout(){
+  const bc=invVisBaseCols(), tc=invVisTabCols();
+  const lefts=[0]; /* fix-idx 0 = 체크박스 열 */
+  let acc=INV_CHK_W, total=INV_CHK_W;
+  bc.forEach(c=>{lefts.push(acc);acc+=invGetW(c.id);});
+  [...bc,...tc].forEach(c=>{total+=invGetW(c.id);});
+  return {bc,tc,lefts,total};
+}
+
+/******************************************************************************
+FUNCTION    : _invtApplyWidths
+DESCRIPTION : state의 열 너비를 colgroup·table width·sticky left에 일괄 반영.
+              리사이즈/자동확장 시 재렌더 없이 호출
+RETURNED    : 없음
+******************************************************************************/
+function _invtApplyWidths(){
+  const tbl=document.getElementById('inv-tbl'); if(!tbl||!invSt) return;
+  const {lefts,total}=_invtLayout();
+  tbl.style.width=total+'px';
+  tbl.querySelectorAll('col[data-cid]').forEach(col=>{col.style.width=invGetW(col.dataset.cid)+'px';});
+  tbl.querySelectorAll('[data-fix-idx]').forEach(el=>{const v=lefts[+el.dataset.fixIdx];if(v!=null)el.style.left=v+'px';});
+}
+
+// ── 렌더 ──────────────────────────────────────────────
 function renderInventory(){invRenderSidebar();invRenderTabs();invRenderActionBar();invRenderBody();}
 
 function invRenderSidebar() {
@@ -142,12 +184,10 @@ function invRenderSidebar() {
     const isA=lg.id===invActiveLedgerId;
     const item=document.createElement('div'); item.className='inv-sb-item'+(isA?' active':'');
     item.dataset.lidx = idx;
-    
     const handle = document.createElement('span');
     handle.className = 'inv-sb-drag-h';
     handle.textContent = '⠿';
     handle.title = '드래그하여 이동';
-    
     const btn=document.createElement('button'); btn.className='inv-sb-item-btn'; btn.textContent=lg.name; btn.title=lg.name;
     btn.ondblclick=()=>{const n=prompt('대장 이름 변경',lg.name);if(n?.trim()){lg.name=n.trim();invFlushSave();invRenderSidebar();}};
     btn.onclick=()=>{if(!isA)invSwitchLedger(lg.id);};
@@ -161,7 +201,7 @@ function invRenderSidebar() {
 function invSwitchLedger(lid){
   invFlushSave(); invActiveLedgerId=lid;
   const next=invLedgers.find(l=>l.id===lid); if(next) invSt=invMakeState(next.data);
-  invRenderSidebar();invRenderTabs();invRenderActionBar();invRenderBody();
+  renderInventory();
 }
 
 function invRenderTabs(){
@@ -192,76 +232,93 @@ function invRenderActionBar(){
     <button class="btn btn-ghost btn-sm" style="margin-left:auto;color:var(--red)" onclick="invDelSelected()">선택 행 삭제</button>`;
 }
 
+/******************************************************************************
+FUNCTION    : invRenderBody
+DESCRIPTION : 메모·숨김열 바·그리드 렌더. 그리드는 단일 스크롤 컨테이너 안의
+              단일 테이블로, thead th는 sticky top, 체크박스+공통열은 sticky left.
+              고정열∩고정헤더 교차 셀은 z-index 최상위 + 불투명 배경
+RETURNED    : 없음
+******************************************************************************/
 function invRenderBody(){
-  const bodyEl=document.getElementById('inv-body'); if(!bodyEl||!invSt) return;
+  const bodyEl=document.getElementById('inv-body'); if(!bodyEl) return;
+  if(!invSt){bodyEl.innerHTML='';return;}
   if(!invSt.tabs.length){bodyEl.innerHTML=`<div class="inv-empty">＋ 탭 추가 버튼으로 시작하세요.</div>`;return;}
+  if(!invSt.tabs[invSt.activeTab]) invSt.activeTab=0;
   const tab=invCurTab();
   const memoVal=(invSt.tabMemos||{})[tab.id]||'';
-  const bc=invSt.baseCols.filter(c=>!invSt.hiddenCols.has(c.id));
-  const tc=tab.cols.filter(c=>!invSt.hiddenCols.has(c.id));
-  const hidCols=[...invSt.baseCols.filter(c=>invSt.hiddenCols.has(c.id)),...tab.cols.filter(c=>invSt.hiddenCols.has(c.id))];
-  const displayRows=invFilteredRows(), dispIds=new Set(displayRows.map(r=>r.id));
-  const hiddenRows=invSt.rows.filter(r=>!dispIds.has(r.id));
+  const {bc,tc,lefts,total}=_invtLayout();
+  const hidCols=[...invSt.baseCols,...tab.cols].filter(c=>invSt.hiddenCols.has(c.id));
+  const rows=invFilteredRows();
   const tabColor=tab.color||INV_PAL[invSt.activeTab%INV_PAL.length];
-  const tabBg=invLightBg(tabColor), tabBo=invAlpha(tabColor,.3);
+  const tabBo=invAlpha(tabColor,.35);
   const f=invSt.filters||{}, sc=invSt.sortCol;
-  const CHK=52;
-  let lefts=[],acc=CHK; bc.forEach(c=>{lefts.push(acc);acc+=invGetW(c.id);});
 
-  const mkFlt=cid=>{const hasF=f[cid]!=null,isSort=sc&&sc.cid===cid;let cls='inv-flt-btn';if(hasF||isSort)cls+=' active';if(isSort)cls+=(sc.dir==='asc'?' inv-sort-asc':' inv-sort-desc');return`<button class="${cls}" data-flt-cid="${cid}">▼</button>`;};
-  const dh=`<span class="inv-th-drag" data-dh="1">⠿</span>`;
+  const mkFlt=cid=>{const hasF=f[cid]!=null,isSort=sc&&sc.cid===cid;let cls='invt-flt-btn';if(hasF||isSort)cls+=' active';if(isSort)cls+=(sc.dir==='asc'?' invt-sort-asc':' invt-sort-desc');return`<button class="${cls}" data-flt-cid="${esc(cid)}">▼</button>`;};
+  const dh=`<span class="invt-th-drag" data-dh="1">⠿</span>`;
+  const alignOf=c=>c.align?`text-align:${c.align};`:'';
 
-  let cg=`<colgroup><col style="width:${CHK}px">`;
-  bc.forEach(c=>{cg+=`<col data-cid="${esc(c.id)}" style="width:${invGetW(c.id)}px">`;});
-  tc.forEach(c=>{cg+=`<col data-cid="${esc(c.id)}" style="width:${invGetW(c.id)}px">`;});
+  /* colgroup — 모든 열 너비를 px로 명시 (table-layout:fixed와 함께 정확한 너비 보장) */
+  let cg=`<colgroup><col style="width:${INV_CHK_W}px">`;
+  [...bc,...tc].forEach(c=>{cg+=`<col data-cid="${esc(c.id)}" style="width:${invGetW(c.id)}px">`;});
   cg+='</colgroup>';
 
+  /* thead — 전체 sticky top, 고정열은 sticky left도 부여 */
   let head='<thead><tr>';
-  head+=`<th class="inv-fc inv-fh" data-fc-idx="0" style="left:0;width:${CHK}px;border-right:2px solid var(--border)">
-    <div class="inv-th-inner" style="justify-content:center"><input type="checkbox" id="inv-chk-all" style="cursor:pointer"></div></th>`;
-  bc.forEach((c,i)=>{const w=invGetW(c.id),isL=i===bc.length-1,rBo=isL?`border-right:2px solid var(--border-h)`:``;
-    head+=`<th class="inv-fc inv-th-base" data-fc-idx="${i+1}" data-cid="${esc(c.id)}" data-scope="base" draggable="true" style="left:${lefts[i]}px;width:${w}px;${rBo}" oncontextmenu="invOpenColCtx('${esc(c.id)}','base',event);event.preventDefault()">
-      <div class="inv-th-inner">${dh}${mkFlt(c.id)}<span class="inv-th-label" ondblclick="invRenameCol('${esc(c.id)}')">${esc(c.name)}</span></div>
-      <div class="inv-resize-h" data-cid="${esc(c.id)}"></div></th>`;
+  head+=`<th class="invt-fix" data-fix-idx="0" style="left:0"><div class="invt-th-inner" style="justify-content:center"><input type="checkbox" id="inv-chk-all" style="cursor:pointer"></div></th>`;
+  bc.forEach((c,i)=>{
+    const last=i===bc.length-1?' invt-fix-last':'';
+    head+=`<th class="invt-fix${last}" data-fix-idx="${i+1}" data-cid="${esc(c.id)}" data-scope="base" draggable="true" style="left:${lefts[i+1]}px" oncontextmenu="invOpenColCtx('${esc(c.id)}','base',event);event.preventDefault()">
+      <div class="invt-th-inner">${dh}${mkFlt(c.id)}<span class="invt-th-label" ondblclick="invRenameCol('${esc(c.id)}')">${esc(c.name)}</span></div>
+      <div class="invt-resize-h" data-cid="${esc(c.id)}"></div></th>`;
   });
-  const ftc=tc.length?tc[0].id:null;
-  tc.forEach(c=>{const w=invGetW(c.id),lBo=c.id===ftc?`border-left:2px solid ${tabColor};`:'';
-    head+=`<th class="inv-th-tab" data-cid="${esc(c.id)}" data-scope="tab" draggable="true" style="width:${w}px;background:#000;${lBo}border-right:1px solid ${tabBo};border-bottom:2px solid ${tabColor}" oncontextmenu="invOpenColCtx('${esc(c.id)}','tab',event);event.preventDefault()">
-      <div class="inv-th-inner">${dh}${mkFlt(c.id)}<span class="inv-th-label" style="color:${tabColor}" ondblclick="invRenameCol('${esc(c.id)}')">${esc(c.name)}</span></div>
-      <div class="inv-resize-h" data-cid="${esc(c.id)}"></div></th>`;
+  tc.forEach((c,i)=>{
+    const first=i===0?`border-left:2px solid ${tabColor};`:'';
+    head+=`<th data-cid="${esc(c.id)}" data-scope="tab" draggable="true" style="${first}border-right:1px solid ${tabBo};border-bottom:2px solid ${tabColor}" oncontextmenu="invOpenColCtx('${esc(c.id)}','tab',event);event.preventDefault()">
+      <div class="invt-th-inner">${dh}${mkFlt(c.id)}<span class="invt-th-label" style="color:${tabColor}" ondblclick="invRenameCol('${esc(c.id)}')">${esc(c.name)}</span></div>
+      <div class="invt-resize-h" data-cid="${esc(c.id)}"></div></th>`;
   });
   head+='</tr></thead>';
 
-  const mkStTd=(col,val,rid,tid,isBase,extraStyle='',extraAttrs='')=>{
+  /* 상태 셀: 고정열은 반투명 tint를 background-image로 얹어 불투명 배경 유지 */
+  const mkStTd=(col,val,rid,tid,isBase,cls,attrs,extra)=>{
     const sts=(col&&col.statuses)||INV_DEFAULT_ST,ev=val||(sts[0]?.label||'');
-    const s=sts.find(x=>x.label===ev),bg=s?invAlpha(s.color,.18):'',bdr=s?`border-bottom:1.5px solid ${invAlpha(s.color,.5)};`:'';
+    const s=sts.find(x=>x.label===ev),tint=s?invAlpha(s.color,.18):'';
+    const bdr=s?`box-shadow:inset 0 -1.5px 0 ${invAlpha(s.color,.5)};`:'';
+    const bg=tint?(cls.includes('invt-fix')?`background-image:linear-gradient(${tint},${tint});`:`background-color:${tint};`):'';
     const opts=sts.map(x=>`<option${ev===x.label?' selected':''}>${esc(x.label)}</option>`).join('');
     const onChange=isBase?`invSetBase('${esc(rid)}','${esc(col.id)}',this.value)`:`invSetTabData('${esc(rid)}','${esc(tid)}','${esc(col.id)}',this.value)`;
-    return`<td ${extraAttrs} style="${extraStyle}background:${bg};${bdr}"><div class="inv-status-wrap"><select class="inv-status-sel" onchange="${onChange};invRenderBody()">${opts}</select></div></td>`;
+    return`<td class="${cls}" ${attrs} style="${extra}${bg}${bdr}"><div class="invt-status-wrap"><select class="invt-status-sel" onchange="${onChange};invRenderBody()">${opts}</select></div></td>`;
   };
+  const mkTxTd=(col,val,onChange,cls,attrs,extra)=>
+    `<td class="${cls}" ${attrs} style="${extra}"><div class="invt-cell-wrap"><textarea class="invt-cell-ta" rows="${Math.max(1,val.split('\n').length)}" wrap="off" data-cid="${esc(col.id)}" style="${alignOf(col)}" oninput="_invCellInput(this)" onchange="${onChange}" onblur="invAutoFitCol('${esc(col.id)}')">${esc(val)}</textarea></div></td>`;
 
   let tbody='<tbody>';
-  [...displayRows,...hiddenRows].forEach(row=>{
-    const hidden=!dispIds.has(row.id),sel=invSt.selected.has(row.id),rh=invSt.rowHeights[row.id];
-    tbody+=`<tr data-rid="${esc(row.id)}" style="${rh?`height:${rh}px`:''}${hidden?';display:none':''}">`;
-    tbody+=`<td class="inv-fc" data-fc-idx="0" style="left:0;width:${CHK}px;border-right:2px solid var(--border)">
-      <div class="inv-row-drag-cell" data-rid="${esc(row.id)}" style="${rh?`height:${rh}px`:''}">
+  rows.forEach(row=>{
+    const sel=invSt.selected.has(row.id),rh=invSt.rowHeights[row.id];
+    tbody+=`<tr data-rid="${esc(row.id)}" style="${rh?`height:${rh}px`:''}" oncontextmenu="invOpenRowCtx('${esc(row.id)}',event);event.preventDefault()">`;
+    tbody+=`<td class="invt-fix" data-fix-idx="0" style="left:0">
+      <div class="invt-row-drag-cell" data-rid="${esc(row.id)}" style="${rh?`height:${rh}px`:''}">
         <span data-dh="row" style="cursor:grab;color:var(--text3);font-size:11px;user-select:none">⠿</span>
         <input type="checkbox" class="inv-rchk" data-rid="${esc(row.id)}" ${sel?'checked':''} style="cursor:pointer">
-        <div class="inv-row-resize-h" data-rid="${esc(row.id)}"></div>
+        <div class="invt-row-resize-h" data-rid="${esc(row.id)}"></div>
       </div></td>`;
-    bc.forEach((c,i)=>{const val=row.base[c.id]||'',isL=i===bc.length-1,rBo=isL?`border-right:2px solid var(--border-h)`:``; const st=`left:${lefts[i]}px;${rBo};`;
-      if(c.type==='status'){tbody+=mkStTd(c,val,row.id,'',true,st,`class="inv-fc" data-fc-idx="${i+1}"`);}
-      else{tbody+=`<td class="inv-fc" data-fc-idx="${i+1}" style="${st}"><div class="inv-cell-wrap"><textarea class="inv-cell-ta" rows="${Math.max(1,val.split('\n').length)}" wrap="off" data-cid="${esc(c.id)}" oninput="_invCellInput(this)" onchange="invSetBase('${esc(row.id)}','${esc(c.id)}',this.value)" onblur="invAutoFitCol('${esc(c.id)}')">${esc(val)}</textarea></div></td>`;}
+    bc.forEach((c,i)=>{
+      const val=row.base[c.id]||'';
+      const cls=`invt-fix${i===bc.length-1?' invt-fix-last':''}`;
+      const attrs=`data-fix-idx="${i+1}"`, extra=`left:${lefts[i+1]}px;`;
+      if(c.type==='status') tbody+=mkStTd(c,val,row.id,'',true,cls,attrs,extra);
+      else tbody+=mkTxTd(c,val,`invSetBase('${esc(row.id)}','${esc(c.id)}',this.value)`,cls,attrs,extra);
     });
     const rd=(row.data&&row.data[tab.id])||{};
-    tc.forEach(c=>{const val=rd[c.id]||'',lBo=c.id===ftc?`border-left:2px solid ${tabColor};`:'';const st=`${lBo}border-right:1px solid ${tabBo};`;
-      if(c.type==='status'){tbody+=mkStTd(c,val,row.id,tab.id,false,st);}
-      else{tbody+=`<td style="${st}"><div class="inv-cell-wrap"><textarea class="inv-cell-ta" rows="${Math.max(1,val.split('\n').length)}" wrap="off" data-cid="${esc(c.id)}" oninput="_invCellInput(this)" onchange="invSetTabData('${esc(row.id)}','${esc(tab.id)}','${esc(c.id)}',this.value)" onblur="invAutoFitCol('${esc(c.id)}')">${esc(val)}</textarea></div></td>`;}
+    tc.forEach((c,i)=>{
+      const val=rd[c.id]||'';
+      const extra=`${i===0?`border-left:2px solid ${tabColor};`:''}border-right:1px solid ${tabBo};`;
+      if(c.type==='status') tbody+=mkStTd(c,val,row.id,tab.id,false,'','',extra);
+      else tbody+=mkTxTd(c,val,`invSetTabData('${esc(row.id)}','${esc(tab.id)}','${esc(c.id)}',this.value)`,'','',extra);
     });
     tbody+='</tr>';
   });
-  if(!displayRows.length&&!hiddenRows.length) tbody+=`<tr><td colspan="${1+bc.length+tc.length}" class="inv-empty">행이 없습니다. ＋ 행 추가를 클릭하세요.</td></tr>`;
+  if(!rows.length) tbody+=`<tr><td colspan="${1+bc.length+tc.length}" class="inv-empty" style="white-space:normal">${invSt.rows.length?'필터 조건에 맞는 행이 없습니다.':'행이 없습니다. ＋ 행 추가를 클릭하세요.'}</td></tr>`;
   tbody+='</tbody>';
 
   const memoHtml=`<div class="inv-memo-wrap">
@@ -269,108 +326,59 @@ function invRenderBody(){
     <div class="inv-memo-body"><textarea class="inv-memo-ta" placeholder="탭 메모..." oninput="invSaveMemo('${esc(tab.id)}',this.value)">${esc(memoVal)}</textarea></div></div>`;
   const hidBarHtml=hidCols.length?`<div class="inv-hidden-bar"><span class="inv-hidden-label">숨겨진 열:</span>${hidCols.map(c=>`<button class="inv-show-col-btn" onclick="invShowCol('${esc(c.id)}')">${esc(c.name)} ▶</button>`).join('')}</div>`:'';
   const tableHtml=(bc.length+tc.length)===0?`<div class="inv-empty">＋ 공통 열 또는 탭 열을 추가하세요.</div>`:
-    `<div class="inv-table-wrap"><table class="inv-table" id="inv-tbl">${cg}${head}${tbody}</table></div>`;
+    `<div class="invt-scroll"><table class="invt-table" id="inv-tbl" style="width:${total}px">${cg}${head}${tbody}</table></div>`;
 
   bodyEl.innerHTML=`${memoHtml}${hidBarHtml}${tableHtml}`;
-  requestAnimationFrame(()=>{
-    bodyEl.querySelectorAll('.inv-cell-ta').forEach(ta=>{ta.rows=Math.max(1,ta.value.split('\n').length);});
-    _invInitColResize();_invInitRowResize();_invInitColDrag();_invInitRowDrag();
-    const tbl=document.getElementById('inv-tbl');
-    /* ── sticky left 실측 보정 ── */
-    if(tbl){
-      const leftMap={};
-      const ths=[...tbl.querySelectorAll('thead .inv-fc[data-fc-idx]')];
-      const base=ths.length?ths[0].offsetLeft:0; // 체크박스 절대 위치 = 기준점
-      ths.forEach(th=>{
-        const left=th.offsetLeft-base; // 테이블 내 상대 위치
-        leftMap[th.dataset.fcIdx]=left;
-        th.style.left=left+'px';
-      });
-      tbl.querySelectorAll('tbody .inv-fc[data-fc-idx]').forEach(td=>{
-        const v=leftMap[td.dataset.fcIdx];
-        if(v!=null) td.style.left=v+'px';
-      });
-    }
-    if(tbl){tbl.querySelectorAll('.inv-flt-btn').forEach(btn=>{btn.addEventListener('click',e=>{e.stopPropagation();invOpenFlt(btn.dataset.fltCid,btn);});});}
+
+  const tbl=document.getElementById('inv-tbl');
+  if(tbl){
+    tbl.querySelectorAll('.invt-cell-ta').forEach(ta=>{ta.rows=Math.max(1,ta.value.split('\n').length);});
+    tbl.querySelectorAll('.invt-flt-btn').forEach(btn=>{btn.addEventListener('click',e=>{e.stopPropagation();invOpenFlt(btn.dataset.fltCid,btn);});});
+    _invInitColResize(tbl);_invInitRowResize(tbl);_invInitColDrag(tbl);_invInitRowDrag(tbl);
     const ca=document.getElementById('inv-chk-all');
-    if(ca){ca.onchange=function(){document.querySelectorAll('.inv-rchk').forEach(cb=>{const tr=cb.closest('tr');if(tr&&tr.style.display==='none')return;cb.checked=this.checked;this.checked?invSt.selected.add(cb.dataset.rid):invSt.selected.delete(cb.dataset.rid);});};}
-    document.querySelectorAll('.inv-rchk').forEach(cb=>{cb.onchange=function(){this.checked?invSt.selected.add(this.dataset.rid):invSt.selected.delete(this.dataset.rid);};});
-  });
+    if(ca){ca.onchange=function(){tbl.querySelectorAll('.inv-rchk').forEach(cb=>{cb.checked=this.checked;this.checked?invSt.selected.add(cb.dataset.rid):invSt.selected.delete(cb.dataset.rid);});};}
+    tbl.querySelectorAll('.inv-rchk').forEach(cb=>{cb.onchange=function(){this.checked?invSt.selected.add(this.dataset.rid):invSt.selected.delete(this.dataset.rid);};});
+  }
 }
 
-/* ── 열 리사이즈 ── */
-function _invSyncStickyLeft(){
-  /* 기본열 리사이즈 후 sticky left 위치 일괄 재계산 */
-  const tbl=document.getElementById('inv-tbl'); if(!tbl) return;
-  const fcThs=[...tbl.querySelectorAll('thead th.inv-fc[data-fc-idx]')]
-    .sort((a,b)=>+a.dataset.fcIdx-+b.dataset.fcIdx);
-  let acc=0;
-  const leftMap={};
-  fcThs.forEach(th=>{
-    th.style.left=acc+'px';
-    leftMap[th.dataset.fcIdx]=acc+'px';
-    acc+=th.offsetWidth;
-  });
-  tbl.querySelectorAll('tbody .inv-fc[data-fc-idx]').forEach(td=>{
-    const v=leftMap[td.dataset.fcIdx];
-    if(v!=null) td.style.left=v;
-  });
-}
-function _invInitColResize(){
-  const tbl=document.getElementById('inv-tbl'); if(!tbl) return;
-  tbl.querySelectorAll('th[data-cid]').forEach(th=>{
-    const rh=th.querySelector('.inv-resize-h'); if(!rh) return;
+// ── 열 리사이즈 ───────────────────────────────────────
+function _invInitColResize(tbl){
+  tbl.querySelectorAll('.invt-resize-h').forEach(rh=>{
     rh.addEventListener('mousedown',e=>{
-      e.preventDefault();e.stopPropagation();rh.classList.add('inv-rsz-drag');
-      const sx=e.clientX,sw=th.offsetWidth,cid=th.dataset.cid;
-      const mv=ev=>{
-        const nw=Math.max(50,sw+ev.clientX-sx);
-        document.querySelectorAll(`[data-cid="${cid}"]`).forEach(el=>el.style.width=nw+'px');
-        _invSyncStickyLeft();
-      };
-      const up=ev=>{
-        const nw=Math.max(50,sw+ev.clientX-sx);
-        if(!invSt.colWidths)invSt.colWidths={};
-        invSt.colWidths[cid]=nw;
-        document.querySelectorAll(`[data-cid="${cid}"]`).forEach(el=>el.style.width=nw+'px');
-        _invSyncStickyLeft();
-        invSave();
-        rh.classList.remove('inv-rsz-drag');
-        document.removeEventListener('mousemove',mv);
-        document.removeEventListener('mouseup',up);
-      };
+      e.preventDefault();e.stopPropagation();rh.classList.add('invt-rsz-drag');
+      const cid=rh.dataset.cid,sx=e.clientX,sw=invGetW(cid);
+      const mv=ev=>{invSt.colWidths[cid]=Math.max(INV_MIN_W,sw+ev.clientX-sx);_invtApplyWidths();};
+      const up=()=>{invSave();rh.classList.remove('invt-rsz-drag');document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
       document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
     });
   });
 }
 
-/* ── 행 리사이즈 ── */
-function _invInitRowResize(){
-  const tbl=document.getElementById('inv-tbl'); if(!tbl) return;
-  tbl.querySelectorAll('.inv-row-resize-h').forEach(h=>{
+// ── 행 리사이즈 ───────────────────────────────────────
+function _invInitRowResize(tbl){
+  tbl.querySelectorAll('.invt-row-resize-h').forEach(h=>{
     h.addEventListener('mousedown',e=>{
-      e.preventDefault();e.stopPropagation();h.classList.add('inv-row-resize-active');
+      e.preventDefault();e.stopPropagation();h.classList.add('invt-rr-drag');
       const rid=h.dataset.rid,tr=tbl.querySelector(`tr[data-rid="${rid}"]`),sy=e.clientY,sh=tr?tr.offsetHeight:32;
-      const mv=ev=>{const nh=Math.max(28,sh+ev.clientY-sy);if(tr){tr.style.height=nh+'px';const dc=tr.querySelector('.inv-row-drag-cell');if(dc)dc.style.height=nh+'px';}};
-      const up=ev=>{const nh=Math.max(28,sh+ev.clientY-sy);if(!invSt.rowHeights)invSt.rowHeights={};invSt.rowHeights[rid]=nh;invSave();h.classList.remove('inv-row-resize-active');document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+      const mv=ev=>{const nh=Math.max(28,sh+ev.clientY-sy);if(tr){tr.style.height=nh+'px';const dc=tr.querySelector('.invt-row-drag-cell');if(dc)dc.style.height=nh+'px';}};
+      const up=ev=>{const nh=Math.max(28,sh+ev.clientY-sy);if(!invSt.rowHeights)invSt.rowHeights={};invSt.rowHeights[rid]=nh;invSave();h.classList.remove('invt-rr-drag');document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
       document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
     });
   });
 }
 
-/* ── 열 드래그 ── */
-function _invInitColDrag(){
-  const tbl=document.getElementById('inv-tbl'); if(!tbl) return;
+// ── 열 드래그 (같은 scope 내 재정렬) ──────────────────
+function _invInitColDrag(tbl){
   let dragCid=null,dragScope=null;
   tbl.querySelectorAll('th[data-cid][draggable]').forEach(th=>{
     th.addEventListener('mousedown',e=>{th.setAttribute('draggable',e.target.dataset.dh?'true':'false');});
-    th.addEventListener('dragstart',e=>{if(th.getAttribute('draggable')==='false'){e.preventDefault();return;}dragCid=th.dataset.cid;dragScope=th.dataset.scope;th.classList.add('inv-col-drag-active');e.dataTransfer.effectAllowed='move';});
-    th.addEventListener('dragend',()=>{th.classList.remove('inv-col-drag-active');tbl.querySelectorAll('th').forEach(t=>t.classList.remove('inv-col-drag-left','inv-col-drag-right'));dragCid=null;});
-    th.addEventListener('dragover',e=>{if(!dragCid||th.dataset.scope!==dragScope||th.dataset.cid===dragCid)return;e.preventDefault();tbl.querySelectorAll('th').forEach(t=>t.classList.remove('inv-col-drag-left','inv-col-drag-right'));const rect=th.getBoundingClientRect();th.classList.add(e.clientX<rect.left+rect.width/2?'inv-col-drag-left':'inv-col-drag-right');});
-    th.addEventListener('dragleave',()=>th.classList.remove('inv-col-drag-left','inv-col-drag-right'));
+    th.addEventListener('dragstart',e=>{if(th.getAttribute('draggable')==='false'){e.preventDefault();return;}dragCid=th.dataset.cid;dragScope=th.dataset.scope;th.classList.add('invt-col-drag-active');e.dataTransfer.effectAllowed='move';});
+    th.addEventListener('dragend',()=>{th.classList.remove('invt-col-drag-active');tbl.querySelectorAll('th').forEach(t=>t.classList.remove('invt-col-drag-left','invt-col-drag-right'));dragCid=null;});
+    th.addEventListener('dragover',e=>{if(!dragCid||th.dataset.scope!==dragScope||th.dataset.cid===dragCid)return;e.preventDefault();tbl.querySelectorAll('th').forEach(t=>t.classList.remove('invt-col-drag-left','invt-col-drag-right'));const rect=th.getBoundingClientRect();th.classList.add(e.clientX<rect.left+rect.width/2?'invt-col-drag-left':'invt-col-drag-right');});
+    th.addEventListener('dragleave',()=>th.classList.remove('invt-col-drag-left','invt-col-drag-right'));
     th.addEventListener('drop',e=>{
       e.preventDefault();if(!dragCid||th.dataset.scope!==dragScope||th.dataset.cid===dragCid)return;
-      th.classList.remove('inv-col-drag-left','inv-col-drag-right');
+      th.classList.remove('invt-col-drag-left','invt-col-drag-right');
       const arr=dragScope==='base'?invSt.baseCols:invCurTab().cols;
       const fi=arr.findIndex(c=>c.id===dragCid),ti=arr.findIndex(c=>c.id===th.dataset.cid);if(fi<0||ti<0)return;
       const rect=th.getBoundingClientRect(),ib=e.clientX<rect.left+rect.width/2;
@@ -380,23 +388,22 @@ function _invInitColDrag(){
   });
 }
 
-/* ── 행 드래그 ── */
-function _invInitRowDrag(){
-  const tbl=document.getElementById('inv-tbl'); if(!tbl) return;
+// ── 행 드래그 (재정렬) ────────────────────────────────
+function _invInitRowDrag(tbl){
   let dragRid=null;const tbody=tbl.querySelector('tbody');
   function rowOf(el){return el.closest('tr[data-rid]');}
   tbody.addEventListener('mousedown',e=>{
     const dh=e.target.closest('[data-dh="row"]'),tr=dh&&rowOf(dh);
     if(!tr)return;tr.setAttribute('draggable','true');dragRid=tr.dataset.rid;
-    document.addEventListener('mouseup',function cleanup(){tr.setAttribute('draggable','false');tbl.querySelectorAll('tr[data-rid]').forEach(r=>r.classList.remove('inv-row-drag-active','inv-row-drag-top','inv-row-drag-bot'));document.removeEventListener('mouseup',cleanup);},{once:true});
+    document.addEventListener('mouseup',function cleanup(){tr.setAttribute('draggable','false');tbl.querySelectorAll('tr[data-rid]').forEach(r=>r.classList.remove('invt-row-drag-active','invt-row-drag-top','invt-row-drag-bot'));document.removeEventListener('mouseup',cleanup);},{once:true});
   });
-  tbody.addEventListener('dragstart',e=>{const tr=rowOf(e.target);if(!tr||tr.dataset.rid!==dragRid)return;tr.classList.add('inv-row-drag-active');e.dataTransfer.effectAllowed='move';});
-  tbody.addEventListener('dragend',e=>{const tr=rowOf(e.target);if(tr)tr.classList.remove('inv-row-drag-active');tbl.querySelectorAll('tr[data-rid]').forEach(r=>r.classList.remove('inv-row-drag-top','inv-row-drag-bot'));dragRid=null;});
-  tbody.addEventListener('dragover',e=>{e.preventDefault();const tr=rowOf(e.target);if(!tr||!dragRid)return;tbl.querySelectorAll('tr[data-rid]').forEach(r=>r.classList.remove('inv-row-drag-top','inv-row-drag-bot'));const rect=tr.getBoundingClientRect();tr.classList.add(e.clientY<rect.top+rect.height/2?'inv-row-drag-top':'inv-row-drag-bot');});
-  tbody.addEventListener('dragleave',e=>{const tr=rowOf(e.target);if(tr)tr.classList.remove('inv-row-drag-top','inv-row-drag-bot');});
+  tbody.addEventListener('dragstart',e=>{const tr=rowOf(e.target);if(!tr||tr.dataset.rid!==dragRid)return;tr.classList.add('invt-row-drag-active');e.dataTransfer.effectAllowed='move';});
+  tbody.addEventListener('dragend',e=>{const tr=rowOf(e.target);if(tr)tr.classList.remove('invt-row-drag-active');tbl.querySelectorAll('tr[data-rid]').forEach(r=>r.classList.remove('invt-row-drag-top','invt-row-drag-bot'));dragRid=null;});
+  tbody.addEventListener('dragover',e=>{e.preventDefault();const tr=rowOf(e.target);if(!tr||!dragRid)return;tbl.querySelectorAll('tr[data-rid]').forEach(r=>r.classList.remove('invt-row-drag-top','invt-row-drag-bot'));const rect=tr.getBoundingClientRect();tr.classList.add(e.clientY<rect.top+rect.height/2?'invt-row-drag-top':'invt-row-drag-bot');});
+  tbody.addEventListener('dragleave',e=>{const tr=rowOf(e.target);if(tr)tr.classList.remove('invt-row-drag-top','invt-row-drag-bot');});
   tbody.addEventListener('drop',e=>{
     e.preventDefault();const tr=rowOf(e.target);if(!tr||!dragRid||tr.dataset.rid===dragRid)return;
-    tr.classList.remove('inv-row-drag-top','inv-row-drag-bot');
+    tr.classList.remove('invt-row-drag-top','invt-row-drag-bot');
     const rows=invSt.rows,fi=rows.findIndex(r=>r.id===dragRid),ti=rows.findIndex(r=>r.id===tr.dataset.rid);if(fi<0||ti<0)return;
     const rect=tr.getBoundingClientRect(),ib=e.clientY<rect.top+rect.height/2;
     const [row]=rows.splice(fi,1),ni=rows.findIndex(r=>r.id===tr.dataset.rid);
@@ -404,7 +411,7 @@ function _invInitRowDrag(){
   });
 }
 
-/* ── 필터 팝업 ── */
+// ── 필터 팝업 ─────────────────────────────────────────
 function invOpenFlt(cid, btnEl){
   invCloseFloats();
   const col=invFindCol(cid); if(!col) return;
@@ -451,7 +458,7 @@ function invOpenFlt(cid, btnEl){
   setTimeout(()=>{document.addEventListener('mousedown',function h(e){if(!pop.contains(e.target)&&e.target!==btnEl){pop.remove();document.removeEventListener('mousedown',h);}});},10);
 }
 
-/* ── 열 컨텍스트 메뉴 ── */
+// ── 열 컨텍스트 메뉴 ──────────────────────────────────
 function invOpenColCtx(cid, scope, e){
   invCloseFloats();
   const col=invFindCol(cid); if(!col) return;
@@ -470,11 +477,11 @@ function invOpenColCtx(cid, scope, e){
   if(invSt.hiddenCols.size>0){menu.appendChild(item('◉','모든 열 표시',()=>{invSt.hiddenCols.clear();invSave();invRenderBody();}));}
   if(!col.nodels){menu.appendChild(sep());menu.appendChild(item('×','열 삭제',()=>{if(!confirm(`'${col.name}' 열을 삭제하시겠습니까?`))return;if(scope==='base'){invSt.baseCols=invSt.baseCols.filter(c=>c.id!==cid);invSt.rows.forEach(r=>delete r.base[cid]);}else{invCurTab().cols=invCurTab().cols.filter(c=>c.id!==cid);}if(invSt.sortCol?.cid===cid)invSt.sortCol=null;delete invSt.filters[cid];delete invSt.colWidths[cid];invSave();invRenderBody();invRenderActionBar();},'danger'));}
   document.body.appendChild(menu);
-  menu.style.left=Math.min(e.clientX,window.innerWidth-170)+'px';menu.style.top=Math.min(e.clientY,window.innerHeight-200)+'px';
+  menu.style.left=Math.min(e.clientX,window.innerWidth-170)+'px';menu.style.top=Math.min(e.clientY,window.innerHeight-260)+'px';
   setTimeout(()=>document.addEventListener('mousedown',function h(ev){if(!menu.contains(ev.target)){menu.remove();document.removeEventListener('mousedown',h);};}),10);
 }
 
-/* ── 행 컨텍스트 메뉴 ── */
+// ── 행 컨텍스트 메뉴 ──────────────────────────────────
 function invOpenRowCtx(rid, e){
   invCloseFloats();
   const menu=document.createElement('div'); menu.className='inv-ctx-menu';
@@ -487,7 +494,7 @@ function invOpenRowCtx(rid, e){
   setTimeout(()=>document.addEventListener('mousedown',function h(ev){if(!menu.contains(ev.target)){menu.remove();document.removeEventListener('mousedown',h);};}),10);
 }
 
-/* ── 인벤토리 모달 ── */
+// ── 인벤토리 모달 ─────────────────────────────────────
 let _invModalCb=null;
 function invOpenModal(title,bodyHtml,cb,okLabel='확인'){
   const bg=document.getElementById('inv-modal-bg'); if(!bg) return;
@@ -499,7 +506,7 @@ function invOpenModal(title,bodyHtml,cb,okLabel='확인'){
 }
 function invCloseModal(){const bg=document.getElementById('inv-modal-bg');if(bg)bg.classList.remove('open');_invModalCb=null;_invSiData=[];}
 
-// ── 상태값 편집 (모달 내) ──
+// ── 상태값 편집 (모달 내) ─────────────────────────────
 let _invSiData=[];
 function _invRenderSiList(){
   const wrap=document.getElementById('inv-si-wrap');if(!wrap)return;wrap.innerHTML='';
@@ -518,9 +525,8 @@ function _invRenderSiList(){
 }
 function _invAddSiRow(){_invSiData.push({label:'',color:'#888888'});_invRenderSiList();const w=document.getElementById('inv-si-wrap');if(w){const l=w.querySelector('.inv-si-row:last-child .inv-si-name');if(l)l.focus();}}
 
-/* ── 탭 조작 ── */
+// ── 탭 조작 ───────────────────────────────────────────
 function invSetTab(i){invSt.activeTab=i;invSt.selected.clear();invSt.filters={};invSt.sortCol=null;invSave();invRenderTabs();invRenderActionBar();invRenderBody();}
-function invMoveTab(i,d){const j=i+d;if(j<0||j>=invSt.tabs.length)return;[invSt.tabs[i],invSt.tabs[j]]=[invSt.tabs[j],invSt.tabs[i]];if(invSt.activeTab===i)invSt.activeTab=j;invSave();invRenderTabs();}
 function invDelTab(i){if(invSt.tabs.length<=1){alert('최소 1개 탭이 필요합니다.');return;}if(!confirm(`'${invSt.tabs[i].name}' 탭을 삭제하시겠습니까?`))return;invSt.tabs.splice(i,1);invSt.activeTab=Math.min(invSt.activeTab,invSt.tabs.length-1);invSave();invRenderTabs();invRenderActionBar();invRenderBody();}
 function invOpenTabCtx(i,e){
   invCloseFloats();
@@ -586,6 +592,7 @@ function _invInitTabDrag(){
   });
 }
 
+// ── 사이드바 대장 드래그 ──────────────────────────────
 function _invInitLedgerDrag() {
   const list = document.getElementById('inv-sb-list'); if(!list) return;
   let dragIdx=null, dragEl=null, placeholder=null;
@@ -598,7 +605,6 @@ function _invInitLedgerDrag() {
       placeholder = document.createElement('div');
       placeholder.className = 'inv-sb-drag-ph';
       placeholder.style.cssText = `height:${item.offsetHeight}px; border:1px dashed var(--border-h); background:rgba(0,0,0,0.05); margin:2px 0;`;
-      
       const mv = ev => {
         const items = [...list.querySelectorAll('.inv-sb-item:not([style*="opacity"])')];
         let targetIdx = invLedgers.length;
@@ -633,6 +639,8 @@ function _invInitLedgerDrag() {
     });
   });
 }
+
+// ── 탭 추가/편집 ──────────────────────────────────────
 function invAddTab(){
   invOpenModal('탭 추가',`<label class="inv-modal-label">탭 이름</label><input class="inv-modal-inp" id="im_name" placeholder="예: 네트워크" autocomplete="off">
     <label class="inv-modal-label">탭 색상</label>
@@ -652,7 +660,7 @@ function invEditTab(i){
   setTimeout(()=>{const ni=document.getElementById('im_name'),pr=document.getElementById('im_prev');if(ni&&pr)ni.addEventListener('input',()=>{pr.textContent=ni.value||'미리보기';});},30);
 }
 
-/* ── 열 조작 ── */
+// ── 열 조작 ───────────────────────────────────────────
 function invAddBaseCol(){
   _invSiData=invClone(INV_DEFAULT_ST);
   invOpenModal('공통 열 추가',`<label class="inv-modal-label">열 이름</label><input class="inv-modal-inp" id="im_name" placeholder="예: IP주소" autocomplete="off">
@@ -682,7 +690,7 @@ function invCfgStatus(cid){
 }
 function invClearFilters(){invSt.filters={};invSt.sortCol=null;invSave();invRenderBody();invRenderActionBar();}
 
-/* ── 행 조작 ── */
+// ── 행 조작 ───────────────────────────────────────────
 function invAddRow(){
   const noCol=invSt.baseCols.find(c=>c.nodels);
   const editCols=invSt.baseCols.filter(c=>c!==noCol);
@@ -699,44 +707,40 @@ function invDelSelected(){if(!invSt.selected.size){alert('삭제할 행을 선�
 function invSetBase(rid,cid,val){const r=invSt.rows.find(r=>r.id===rid);if(!r)return;if(!r.base)r.base={};r.base[cid]=val;invSave();}
 function invSetTabData(rid,tid,cid,val){const r=invSt.rows.find(r=>r.id===rid);if(!r)return;if(!r.data)r.data={};if(!r.data[tid])r.data[tid]={};r.data[tid][cid]=val;invSave();}
 function invSaveMemo(tid,val){if(!invSt.tabMemos)invSt.tabMemos={};invSt.tabMemos[tid]=val;invSave();}
-function invAutoFitCol(cid){const nw=invAutoW(cid);if((invSt.colWidths[cid]||0)>nw)return;invSt.colWidths[cid]=nw;document.querySelectorAll(`[data-cid="${cid}"]`).forEach(el=>el.style.width=nw+'px');invSave();}
+function invAutoFitCol(cid){const nw=invAutoW(cid);if((invSt.colWidths[cid]||0)>nw)return;invSt.colWidths[cid]=nw;_invtApplyWidths();invSave();}
 function _invCellInput(ta){
   ta.rows=Math.max(1,ta.value.split('\n').length);
   const cid=ta.dataset.cid; if(!cid) return;
-  // overflow:hidden 상태에선 scrollWidth가 clientWidth를 초과하지 않으므로 측정 전 해제
+  /* overflow:hidden 상태에선 scrollWidth가 clientWidth를 초과하지 않으므로 측정 전 해제 */
   ta.style.overflowX='auto';
   const sw=ta.scrollWidth;
   ta.style.overflowX='';
   if(sw>ta.clientWidth){
-    const nw=Math.max(invGetW(cid),sw+16);
-    invSt.colWidths[cid]=nw;
-    document.querySelectorAll(`[data-cid="${cid}"]`).forEach(el=>el.style.width=nw+'px');
+    invSt.colWidths[cid]=Math.min(INV_MAX_W,Math.max(invGetW(cid),sw+20));
+    _invtApplyWidths();
     invSave();
   }
 }
 
-/* ── 내보내기 ── */
+// ── 내보내기 (Excel XML) ──────────────────────────────
 function invExport() {
   if (!invLedgers.length) {
     toast('내보낼 대장이 없습니다.');
     return;
   }
-
   const ledgerOptions = invLedgers.map(lg => `
     <label style="display:flex; align-items:center; gap:8px; padding:10px; border:1px solid var(--border); border-radius:var(--r); margin-bottom:8px; cursor:pointer">
-      <input type="radio" name="export-ledger" value="${lg.id}" ${lg.id === invActiveLedgerId ? 'checked' : ''}>
+      <input type="radio" name="export-ledger" value="${esc(lg.id)}" ${lg.id === invActiveLedgerId ? 'checked' : ''}>
       <span style="font-size:14px; color:var(--text)">${esc(lg.name)}</span>
       <span style="margin-left:auto; font-size:11px; color:var(--text3)">${lg.data.tabs.length}개 탭</span>
     </label>
   `).join('');
-
   const bodyHtml = `
     <div style="margin-bottom:15px; font-size:13px; color:var(--text2)">내보낼 대장을 선택하세요:</div>
     <div id="export-ledger-list" style="max-height:300px; overflow-y:auto; padding-right:5px">
       ${ledgerOptions}
     </div>
   `;
-
   invOpenModal('대장 내보내기 (1/2)', bodyHtml, () => {
     const selectedId = document.querySelector('input[name="export-ledger"]:checked')?.value;
     if (!selectedId) return false;
@@ -748,7 +752,6 @@ function invExport() {
 function invShowTabSelection(ledgerId) {
   const ledger = invLedgers.find(l => l.id === ledgerId);
   if (!ledger) return;
-
   const tabOptions = ledger.data.tabs.map((tab, idx) => `
     <label style="display:flex; align-items:center; gap:8px; padding:10px; border:1px solid var(--border); border-radius:var(--r); margin-bottom:8px; cursor:pointer">
       <input type="checkbox" name="export-tabs" value="${idx}" checked>
@@ -756,7 +759,6 @@ function invShowTabSelection(ledgerId) {
       <span style="margin-left:auto; font-size:11px; color:var(--text3)">${tab.cols.length}개 컬럼</span>
     </label>
   `).join('');
-
   const bodyHtml = `
     <div style="margin-bottom:15px; font-size:13px; color:var(--text2)">
       <strong>${esc(ledger.name)}</strong> 대장에서 내보낼 탭을 선택하세요:
@@ -769,7 +771,6 @@ function invShowTabSelection(ledgerId) {
       ${tabOptions}
     </div>
   `;
-
   invOpenModal('탭 선택 (2/2)', bodyHtml, () => {
     const selectedIndices = Array.from(document.querySelectorAll('input[name="export-tabs"]:checked')).map(i => parseInt(i.value));
     if (!selectedIndices.length) {
@@ -783,12 +784,8 @@ function invShowTabSelection(ledgerId) {
 function invPerformExport(ledgerId, tabIndices) {
   const ledger = invLedgers.find(l => l.id === ledgerId);
   if (!ledger) return;
-  
-  // 만약 현재 활성 대장이 아니라면 임시로 state를 만들어야 함
-  // 하지만 invPerformExport는 데이터 구조만 필요하므로 직접 ledger.data 참조
   const ledgerData = ledger.data;
   const ledgerName = ledger.name;
-
   let xml = `<?xml version="1.0" encoding="utf-8"?>
 <?mso-application progid="Excel.Sheet"?>
 <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
@@ -825,29 +822,22 @@ function invPerformExport(ledgerId, tabIndices) {
    </Borders>
   </Style>
  </Styles>`;
-
   const escXml = v => String(v == null ? '' : v)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
-
   tabIndices.forEach(idx => {
     const tab = ledgerData.tabs[idx];
     xml += `\n <Worksheet ss:Name="${escXml(tab.name)}">`;
     xml += `\n  <Table>`;
-    
     const allCols = [...ledgerData.baseCols, ...tab.cols];
-    
-    // Header Row
     xml += `\n   <Row ss:Height="20">`;
     allCols.forEach(col => {
       xml += `\n    <Cell ss:StyleID="Header"><Data ss:Type="String">${escXml(col.name)}</Data></Cell>`;
     });
     xml += `\n   </Row>`;
-
-    // Data Rows
     ledgerData.rows.forEach(row => {
       xml += `\n   <Row ss:AutoFitHeight="1">`;
       allCols.forEach(col => {
@@ -857,13 +847,10 @@ function invPerformExport(ledgerId, tabIndices) {
       });
       xml += `\n   </Row>`;
     });
-
     xml += `\n  </Table>`;
     xml += `\n </Worksheet>`;
   });
-
   xml += `\n</Workbook>`;
-
   const blob = new Blob([xml], { type: 'application/vnd.ms-excel' });
   const a = document.createElement('a');
   const fileName = `${ledgerName.replace(/[\/\\?%*:|"<>]/g, '_')}_${new Date().toISOString().slice(0, 10)}.xls`;
@@ -874,7 +861,7 @@ function invPerformExport(ledgerId, tabIndices) {
   toast(`엑셀 내보내기 완료 (${tabIndices.length}개 탭)`);
 }
 
-// 초기화 이벤트 리스너 (DOM 로드 후)
+// ── 초기화 (DOM 로드 후 모달 버튼 연결) ───────────────
 document.addEventListener('DOMContentLoaded', () => {
   const bg = document.getElementById('inv-modal-bg');
   if (bg) {

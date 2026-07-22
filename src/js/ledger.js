@@ -187,11 +187,11 @@ function _renderLedgerGroup(list) {
           <thead>
             <tr style="background:var(--s2)">
               <th style="padding:6px 10px;font-size:10px;color:var(--text2);font-weight:600;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">ID</th>
-              <th style="padding:6px 10px;font-size:10px;color:var(--text2);font-weight:600;text-align:left;border-bottom:1px solid var(--border);cursor:pointer;user-select:none" onclick="setGrpSort('${esc(cat)}','title')">제목 <span style="font-size:9px">${(grpSort[cat]?.key==='title')?(grpSort[cat]?.dir===1?'▲':'▼'):'⇅'}</span></th>
-              <th style="padding:6px 10px;font-size:10px;color:var(--text2);font-weight:600;text-align:left;border-bottom:1px solid var(--border);cursor:pointer;user-select:none" onclick="setGrpSort('${esc(cat)}','startDate')">시작일 <span style="font-size:9px">${(grpSort[cat]?.key==='startDate')?(grpSort[cat]?.dir===1?'▲':'▼'):'⇅'}</span></th>
-              <th style="padding:6px 10px;font-size:10px;color:var(--text2);font-weight:600;text-align:left;border-bottom:1px solid var(--border);cursor:pointer;user-select:none" onclick="setGrpSort('${esc(cat)}','dueDate')">마감일 <span style="font-size:9px">${(grpSort[cat]?.key==='dueDate')?(grpSort[cat]?.dir===1?'▲':'▼'):'⇅'}</span></th>
-              <th style="padding:6px 10px;font-size:10px;color:var(--text2);font-weight:600;text-align:left;border-bottom:1px solid var(--border);cursor:pointer;user-select:none" onclick="setGrpSort('${esc(cat)}','priority')">우선순위 <span style="font-size:9px">${(grpSort[cat]?.key==='priority')?(grpSort[cat]?.dir===1?'▲':'▼'):'⇅'}</span></th>
-              <th style="padding:6px 10px;font-size:10px;color:var(--text2);font-weight:600;text-align:left;border-bottom:1px solid var(--border);cursor:pointer;user-select:none" onclick="setGrpSort('${esc(cat)}','status')">상태 <span style="font-size:9px">${(grpSort[cat]?.key==='status')?(grpSort[cat]?.dir===1?'▲':'▼'):'⇅'}</span></th>
+              <th class="grp-sort-th" data-cat="${esc(cat)}" data-key="title" style="padding:6px 10px;font-size:10px;color:var(--text2);font-weight:600;text-align:left;border-bottom:1px solid var(--border);cursor:pointer;user-select:none">제목 <span style="font-size:9px">${(grpSort[cat]?.key==='title')?(grpSort[cat]?.dir===1?'▲':'▼'):'⇅'}</span></th>
+              <th class="grp-sort-th" data-cat="${esc(cat)}" data-key="startDate" style="padding:6px 10px;font-size:10px;color:var(--text2);font-weight:600;text-align:left;border-bottom:1px solid var(--border);cursor:pointer;user-select:none">시작일 <span style="font-size:9px">${(grpSort[cat]?.key==='startDate')?(grpSort[cat]?.dir===1?'▲':'▼'):'⇅'}</span></th>
+              <th class="grp-sort-th" data-cat="${esc(cat)}" data-key="dueDate" style="padding:6px 10px;font-size:10px;color:var(--text2);font-weight:600;text-align:left;border-bottom:1px solid var(--border);cursor:pointer;user-select:none">마감일 <span style="font-size:9px">${(grpSort[cat]?.key==='dueDate')?(grpSort[cat]?.dir===1?'▲':'▼'):'⇅'}</span></th>
+              <th class="grp-sort-th" data-cat="${esc(cat)}" data-key="priority" style="padding:6px 10px;font-size:10px;color:var(--text2);font-weight:600;text-align:left;border-bottom:1px solid var(--border);cursor:pointer;user-select:none">우선순위 <span style="font-size:9px">${(grpSort[cat]?.key==='priority')?(grpSort[cat]?.dir===1?'▲':'▼'):'⇅'}</span></th>
+              <th class="grp-sort-th" data-cat="${esc(cat)}" data-key="status" style="padding:6px 10px;font-size:10px;color:var(--text2);font-weight:600;text-align:left;border-bottom:1px solid var(--border);cursor:pointer;user-select:none">상태 <span style="font-size:9px">${(grpSort[cat]?.key==='status')?(grpSort[cat]?.dir===1?'▲':'▼'):'⇅'}</span></th>
               <th style="padding:6px 10px;font-size:10px;color:var(--text2);font-weight:600;text-align:left;border-bottom:1px solid var(--border)">담당자</th>
               <th style="padding:6px 10px;font-size:10px;color:var(--text2);font-weight:600;text-align:left;border-bottom:1px solid var(--border)">태그</th>
               <th style="padding:6px 10px;font-size:10px;color:var(--text2);font-weight:600;text-align:left;border-bottom:1px solid var(--border)">완료일</th>
@@ -203,9 +203,12 @@ function _renderLedgerGroup(list) {
     </div>`;
   }).join('');
 
-  // 그룹 헤더 클릭 바인딩 (카테고리명 인젝션 방지: data-* + listener)
+  // 그룹 헤더·정렬 헤더 클릭 바인딩 (카테고리명 인젝션 방지: data-* + listener)
   wrap.querySelectorAll('.grp-header').forEach(h => {
     h.addEventListener('click', () => toggleGrp(h.dataset.cat));
+  });
+  wrap.querySelectorAll('.grp-sort-th').forEach(th => {
+    th.addEventListener('click', () => setGrpSort(th.dataset.cat, th.dataset.key));
   });
 
   if (grpExpandedId) {
